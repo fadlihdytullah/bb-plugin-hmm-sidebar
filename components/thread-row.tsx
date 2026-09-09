@@ -1,0 +1,132 @@
+import {
+  experimental_useSidebarThreadActions,
+  experimental_useSidebarThreadSplit,
+  type PluginSidebarThread,
+} from "@get-bb/plugin-sdk/app";
+import { toast } from "sonner";
+import { ActionMenu } from "@/components/action-menu";
+import { Icon } from "@/components/ui/icon";
+import { threadTitle } from "@/lib/sidebar-model";
+
+function indicatorClass(thread: PluginSidebarThread): string {
+  switch (thread.indicator) {
+    case "unread-error":
+      return "bg-destructive";
+    case "waiting-for-input":
+      return "bg-amber-500";
+    case "working-draft":
+    case "workflow":
+    case "background-agent":
+    case "background-command":
+    case "plan-mode":
+    case "goal":
+    case "runtime":
+      return "animate-pulse bg-emerald-500";
+    case "unread-success":
+      return "bg-primary";
+    case "draft":
+      return "bg-muted-foreground/60";
+    case "none":
+    default:
+      return thread.isUnread ? "bg-primary" : "bg-muted-foreground/30";
+  }
+}
+
+export function ThreadRow({
+  thread,
+  activeThreadId,
+  onNavigate,
+}: {
+  thread: PluginSidebarThread;
+  activeThreadId: string | null;
+  onNavigate: () => void;
+}) {
+  const actions = experimental_useSidebarThreadActions();
+  const { splitProps } = experimental_useSidebarThreadSplit(thread.id);
+  const title = threadTitle(thread);
+  const isActive = thread.id === activeThreadId;
+
+  const reportError = (cause: unknown) => {
+    toast.error("Could not update thread", {
+      description: cause instanceof Error ? cause.message : String(cause),
+    });
+  };
+
+  return (
+    <li className="group/thread relative list-none">
+      <a
+        {...splitProps}
+        data-sidebar-thread-shortcut-target=""
+        data-sidebar-thread-id={thread.id}
+        href="#"
+        aria-current={isActive ? "page" : undefined}
+        aria-label={`${title}${thread.indicatorLabel ? `, ${thread.indicatorLabel}` : ""}`}
+        className={`flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 pr-9 text-xs transition-colors motion-reduce:transition-none ${
+          isActive
+            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+            : "text-sidebar-foreground hover:bg-sidebar-accent/70"
+        }`}
+        onClick={(event) => {
+          event.preventDefault();
+          actions.open(thread.id, { split: false });
+          onNavigate();
+        }}
+      >
+        <span
+          aria-hidden="true"
+          className={`size-1.5 shrink-0 rounded-full ${indicatorClass(thread)}`}
+        />
+        <span className="min-w-0 flex-1 truncate font-medium leading-4">
+          {title}
+        </span>
+        {thread.isUnread ? (
+          <span className="sr-only">Unread</span>
+        ) : null}
+      </a>
+      <div className="pointer-events-auto absolute bottom-0 right-1 top-0 flex items-center">
+        <ActionMenu
+          label={`Actions for ${title}`}
+          items={[
+            {
+              id: "pin",
+              label: thread.isPinned ? "Unpin thread" : "Pin thread",
+              onSelect: () => {
+                void actions.setPinned(thread.id, !thread.isPinned).catch(reportError);
+              },
+            },
+            {
+              id: "read",
+              label: thread.isUnread ? "Mark as read" : "Mark as unread",
+              onSelect: () => {
+                void actions.setRead(thread.id, thread.isUnread).catch(reportError);
+              },
+            },
+            {
+              id: "rename",
+              label: "Rename thread",
+              onSelect: () => {
+                const nextTitle = window.prompt("Rename thread", title)?.trim();
+                if (nextTitle && nextTitle !== title) {
+                  void actions.rename(thread.id, nextTitle).catch(reportError);
+                }
+              },
+            },
+            {
+              id: "archive",
+              label: "Archive thread",
+              onSelect: () => actions.archive(thread.id),
+            },
+            {
+              id: "delete",
+              label: "Delete thread",
+              destructive: true,
+              onSelect: () => actions.requestDelete(thread.id),
+            },
+          ]}
+        >
+          <Icon name="MoreHorizontal" className="size-4" aria-hidden="true" />
+        </ActionMenu>
+      </div>
+    </li>
+  );
+}
