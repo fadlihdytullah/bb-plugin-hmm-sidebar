@@ -5,7 +5,9 @@ import {
   type PluginSidebarThread,
   type PluginSidebarThreadIndicator,
 } from "@get-bb/plugin-sdk/app";
+import { toast } from "sonner";
 import { forgetRecent, rememberRecent, useRecents } from "@/hooks/use-recents";
+import { Icon } from "@/components/ui/icon";
 
 const ACTIVITY_KEYS = [
   "workflows",
@@ -120,6 +122,8 @@ function ActivityRow({
   status,
   activeThreadId,
   compact,
+  pinned = false,
+  onTogglePin,
   onForget,
   onNavigate,
   actions,
@@ -129,6 +133,8 @@ function ActivityRow({
   status: ActivityStatusDefinition;
   activeThreadId: string | null;
   compact?: boolean;
+  pinned?: boolean;
+  onTogglePin?: (threadId: string, pinned: boolean) => void;
   onForget?: (threadId: string) => void;
   onNavigate: () => void;
   actions: ReturnType<typeof experimental_useSidebarThreadActions>;
@@ -148,7 +154,7 @@ function ActivityRow({
         aria-label={`${title}, ${project}, ${status.label}`}
         className={`flex min-w-0 items-start gap-1.5 rounded-md pl-2 transition-colors motion-reduce:transition-none ${
           compact ? "py-1" : "py-1.5"
-        } ${onForget ? "pr-6" : "pr-2"} ${
+        } ${onForget && onTogglePin ? "pr-14" : onForget || onTogglePin ? "pr-8" : "pr-2"} ${
           isCurrent
             ? "bg-sidebar-accent text-sidebar-accent-foreground"
             : "text-sidebar-foreground hover:bg-sidebar-accent/70"
@@ -179,6 +185,22 @@ function ActivityRow({
         </span>
         <span className="sr-only">{status.label}</span>
       </a>
+      {onTogglePin ? (
+        <button
+          type="button"
+          aria-label={`${pinned ? "Unpin" : "Pin"} ${title} in Activity`}
+          aria-pressed={pinned}
+          title={`${pinned ? "Unpin from" : "Pin in"} Activity`}
+          onClick={() => onTogglePin(thread.id, pinned)}
+          className={`absolute ${onForget ? "right-7" : "right-1"} top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-opacity hover:bg-state-hover hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring motion-reduce:transition-none ${
+            pinned
+              ? "opacity-100"
+              : "pointer-events-none opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover/activity:pointer-events-auto group-hover/activity:opacity-100"
+          }`}
+        >
+          <Icon name={pinned ? "PinOff" : "Pin"} className="size-3.5" aria-hidden="true" />
+        </button>
+      ) : null}
       {onForget ? (
         <button
           type="button"
@@ -222,7 +244,10 @@ export function ActivityPanel({
     return new Set(
       threads
         .filter(
-          (thread) => recent.has(thread.id) && statusForThread(thread) === null,
+          (thread) =>
+            recent.has(thread.id) &&
+            !thread.isPinned &&
+            statusForThread(thread) === null,
         )
         .map((thread) => thread.id),
     );
@@ -242,26 +267,45 @@ export function ActivityPanel({
   );
 
   const activityThreads = useMemo(
-    () =>
-      threads
-        .filter((thread) => !thread.isArchived && !parkedIds.has(thread.id))
+    () => {
+      const candidates = threads.filter(
+        (thread) => !thread.isArchived && !parkedIds.has(thread.id),
+      );
+      const active = candidates
         .map((thread) => ({ thread, status: statusForThread(thread) }))
         .filter(
-          (
-            entry,
-          ): entry is {
+          (entry): entry is {
             thread: PluginSidebarThread;
             status: ActivityStatusDefinition;
           } => entry.status !== null,
         )
-        // Selection only changes row styling, never the row's position.
+        // Pinning never changes the established order of working agents.
         .sort(
           (left, right) =>
             activityTimestamp(right.thread) - activityTimestamp(left.thread) ||
             left.thread.id.localeCompare(right.thread.id),
-        ),
+        );
+      const activeIds = new Set(active.map(({ thread }) => thread.id));
+      const pinnedIdle = candidates
+        .filter((thread) => thread.isPinned && !activeIds.has(thread.id))
+        .sort(
+          (left, right) =>
+            activityTimestamp(right) - activityTimestamp(left) ||
+            left.id.localeCompare(right.id),
+        )
+        .map((thread) => ({ thread, status: IDLE_STATUS }));
+      return [...active, ...pinnedIdle];
+    },
     [parkedIds, threads],
   );
+
+  const togglePin = (threadId: string, pinned: boolean): void => {
+    void actions.setPinned(threadId, !pinned).catch((cause: unknown) => {
+      toast.error("Could not update pin", {
+        description: cause instanceof Error ? cause.message : String(cause),
+      });
+    });
+  };
 
   return (
     <section
@@ -287,6 +331,8 @@ export function ActivityPanel({
                 status={status}
                 activeThreadId={activeThreadId}
                 actions={actions}
+                pinned={thread.isPinned}
+                onTogglePin={togglePin}
                 onNavigate={onNavigate}
               />
             ))}
@@ -312,6 +358,8 @@ export function ActivityPanel({
                 activeThreadId={activeThreadId}
                 actions={actions}
                 compact
+                pinned={false}
+                onTogglePin={togglePin}
                 onForget={forgetRecent}
                 onNavigate={onNavigate}
               />

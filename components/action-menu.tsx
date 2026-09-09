@@ -14,10 +14,12 @@ export function ActionMenu({
   label,
   items,
   children,
+  triggerClassName,
 }: {
   label: string;
   items: readonly ActionMenuItem[];
   children?: ReactNode;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -52,7 +54,10 @@ export function ActionMenu({
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-state-hover hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover:opacity-100 data-[state=open]:bg-state-active data-[state=open]:text-foreground data-[state=open]:opacity-100"
+        className={cn(
+          "flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-state-hover hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover:opacity-100 data-[state=open]:bg-state-active data-[state=open]:text-foreground data-[state=open]:opacity-100",
+          triggerClassName,
+        )}
         data-state={open ? "open" : "closed"}
         onClick={() => setOpen((current) => !current)}
       >

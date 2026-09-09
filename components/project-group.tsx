@@ -1,6 +1,7 @@
-import { useMemo, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useState, type DragEvent } from "react";
 import {
   experimental_useSidebarThreadActions,
+  useRpc,
   type PluginSidebarProject,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
@@ -8,6 +9,7 @@ import { ActionMenu } from "@/components/action-menu";
 import { Icon } from "@/components/ui/icon";
 import type { Collection } from "@/contract";
 import { ThreadRow } from "@/components/thread-row";
+import { rpcContract } from "@/contract";
 
 export const PROJECT_DRAG_TYPE = "application/x-bb-collections-project";
 export const COLLECTION_DRAG_TYPE = "application/x-bb-collections-collection";
@@ -38,6 +40,7 @@ export function ProjectGroup({
   projectIndex,
   onMoveProject,
   onError,
+  expandedOverride,
 }: {
   project: PluginSidebarProject;
   threads: readonly PluginSidebarThread[];
@@ -53,9 +56,14 @@ export function ProjectGroup({
     position: number,
   ) => Promise<void>;
   onError: (cause: unknown) => void;
+  expandedOverride?: boolean;
 }) {
   const actions = experimental_useSidebarThreadActions();
+  const rpc = useRpc<typeof rpcContract>();
   const [expanded, setExpanded] = useState(initiallyExpanded);
+  useEffect(() => {
+    if (expandedOverride !== undefined) setExpanded(expandedOverride);
+  }, [expandedOverride]);
   const visibleThreads = useMemo(
     () => threads.filter((thread) => !thread.isArchived),
     [threads],
@@ -82,6 +90,33 @@ export function ProjectGroup({
     return items;
   }, [collections, currentCollectionId, onError, onMoveProject, project.id]);
 
+  const projectItems = useMemo(
+    () => [
+      {
+        id: "rename-project",
+        label: "Rename project",
+        onSelect: () => {
+          const name = window.prompt("Rename project", project.name)?.trim();
+          if (!name || name === project.name) return;
+          void rpc
+            .call("projects_rename", { projectId: project.id, name })
+            .catch(onError);
+        },
+      },
+      ...moveItems,
+      {
+        id: "delete-project",
+        label: "Delete project",
+        destructive: true,
+        onSelect: () => {
+          if (!window.confirm(`Delete ${project.name}? This cannot be undone.`)) return;
+          void rpc.call("projects_delete", { projectId: project.id }).catch(onError);
+        },
+      },
+    ],
+    [moveItems, onError, project.id, project.name, rpc],
+  );
+
   return (
     <li
       className="group/project relative list-none"
@@ -96,7 +131,12 @@ export function ProjectGroup({
       onDrop={(event) => {
         if (project.isPersonal) return;
         const draggedProjectId = projectIdFromDrag(event);
-        if (!draggedProjectId || draggedProjectId === project.id) return;
+        if (!draggedProjectId) return;
+        if (draggedProjectId === project.id) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         void onMoveProject(
@@ -137,7 +177,11 @@ export function ProjectGroup({
           />
         </button>
         <Icon name="Folder" className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-        <span className="min-w-0 flex-1 truncate" title={project.name}>
+        <span
+          className="min-w-0 flex-1 truncate"
+          title={project.name}
+          data-testid="project-name"
+        >
           {project.name}
         </span>
         <button
@@ -148,8 +192,8 @@ export function ProjectGroup({
         >
           <Icon name="MessageSquarePlus" className="size-3.5" aria-hidden="true" />
         </button>
-        {!project.isPersonal && moveItems.length > 0 ? (
-          <ActionMenu label={`Actions for ${project.name}`} items={moveItems}>
+        {!project.isPersonal ? (
+          <ActionMenu label={`Actions for ${project.name}`} items={projectItems}>
             <Icon name="MoreHorizontal" className="size-4" aria-hidden="true" />
           </ActionMenu>
         ) : null}

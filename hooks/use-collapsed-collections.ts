@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-const STORAGE_KEY = "bb-collections-sidebar:collapsed:v1";
+const STORAGE_KEY = "bb-hmm-sidebar:collapsed:v1";
 
 function readCollapsed(): Set<string> {
   try {

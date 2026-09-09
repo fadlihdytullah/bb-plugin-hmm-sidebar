@@ -1,12 +1,14 @@
 import { useCallback, useMemo, useState, type DragEvent } from "react";
 import {
   definePluginApp,
+  experimental_useSidebarThreadActions,
   experimental_useSidebarThreads,
   useBbContext,
   type PluginThreadListProps,
   type ExperimentalSidebarFooterDisclosureProps,
 } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
+import { ActionMenu, type ActionMenuItem } from "@/components/action-menu";
 import { ActivityPanel } from "@/components/activity-panel";
 import { CollectionDialog } from "@/components/collection-dialog";
 import { CollectionRow } from "@/components/collection-row";
@@ -15,11 +17,12 @@ import {
   PROJECT_DRAG_TYPE,
   ProjectGroup,
 } from "@/components/project-group";
+import { ThreadRow } from "@/components/thread-row";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { useCollapsedCollections } from "@/hooks/use-collapsed-collections";
 import { useCollections } from "@/hooks/use-collections";
-import { buildSidebarModel } from "@/lib/sidebar-model";
+import { buildSidebarModel, threadTitle } from "@/lib/sidebar-model";
 import type { Collection } from "@/contract";
 
 function projectIdFromDrag(event: DragEvent): string | null {
@@ -42,6 +45,11 @@ type CollectionsViewProps = Pick<
   includeActivity?: boolean;
 };
 
+type ProjectSort = "name-asc" | "name-desc";
+type ProjectFilter = "all" | "with-chats" | "without-chats";
+type ChatSort = "recent" | "oldest" | "name-asc";
+type ChatFilter = "all" | "unread" | "pinned";
+
 function CollectionsSidebar({
   activeThreadId,
   onNavigate,
@@ -53,10 +61,129 @@ function CollectionsSidebar({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [looseDropActive, setLooseDropActive] = useState(false);
+  const [projectsExpanded, setProjectsExpanded] = useState(true);
+  const [projectSort, setProjectSort] = useState<ProjectSort>("name-asc");
+  const [projectFilter, setProjectFilter] = useState<ProjectFilter>("all");
+  const [chatsExpanded, setChatsExpanded] = useState(true);
+  const [chatSort, setChatSort] = useState<ChatSort>("recent");
+  const [chatFilter, setChatFilter] = useState<ChatFilter>("all");
+  const threadActions = experimental_useSidebarThreadActions();
 
   const model = useMemo(
     () => buildSidebarModel(collectionsState.collections, projects, threads),
     [collectionsState.collections, projects, threads],
+  );
+
+  const visibleLooseProjects = useMemo(() => {
+    const filtered = model.looseProjects.filter((entry) => {
+      const hasChats = entry.threads.some((thread) => !thread.isArchived);
+      if (projectFilter === "with-chats") return hasChats;
+      if (projectFilter === "without-chats") return !hasChats;
+      return true;
+    });
+    return [...filtered].sort((left, right) => {
+      const order = left.project.name.localeCompare(right.project.name, undefined, {
+        sensitivity: "base",
+      });
+      return projectSort === "name-asc" ? order : -order;
+    });
+  }, [model.looseProjects, projectFilter, projectSort]);
+
+  const visibleChats = useMemo(() => {
+    const chats = (model.personalProject?.threads ?? []).filter((thread) => {
+      if (thread.isArchived) return false;
+      if (chatFilter === "unread") return thread.isUnread;
+      if (chatFilter === "pinned") return thread.isPinned;
+      return true;
+    });
+    return [...chats].sort((left, right) => {
+      if (chatSort === "name-asc") {
+        return threadTitle(left).localeCompare(threadTitle(right), undefined, {
+          sensitivity: "base",
+        });
+      }
+      return chatSort === "recent"
+        ? right.updatedAt - left.updatedAt
+        : left.updatedAt - right.updatedAt;
+    });
+  }, [chatFilter, chatSort, model.personalProject]);
+
+  const chatViewItems = useMemo<readonly ActionMenuItem[]>(
+    () => [
+      {
+        id: "chat-sort-recent",
+        label: "Sort by newest",
+        disabled: chatSort === "recent",
+        onSelect: () => setChatSort("recent"),
+      },
+      {
+        id: "chat-sort-oldest",
+        label: "Sort by oldest",
+        disabled: chatSort === "oldest",
+        onSelect: () => setChatSort("oldest"),
+      },
+      {
+        id: "chat-sort-name-asc",
+        label: "Sort A to Z",
+        disabled: chatSort === "name-asc",
+        onSelect: () => setChatSort("name-asc"),
+      },
+      {
+        id: "chat-filter-all",
+        label: "Show all chats",
+        disabled: chatFilter === "all",
+        onSelect: () => setChatFilter("all"),
+      },
+      {
+        id: "chat-filter-unread",
+        label: "Only unread chats",
+        disabled: chatFilter === "unread",
+        onSelect: () => setChatFilter("unread"),
+      },
+      {
+        id: "chat-filter-pinned",
+        label: "Only pinned chats",
+        disabled: chatFilter === "pinned",
+        onSelect: () => setChatFilter("pinned"),
+      },
+    ],
+    [chatFilter, chatSort],
+  );
+
+  const projectViewItems = useMemo<readonly ActionMenuItem[]>(
+    () => [
+      {
+        id: "sort-name-asc",
+        label: "Sort A to Z",
+        disabled: projectSort === "name-asc",
+        onSelect: () => setProjectSort("name-asc"),
+      },
+      {
+        id: "sort-name-desc",
+        label: "Sort Z to A",
+        disabled: projectSort === "name-desc",
+        onSelect: () => setProjectSort("name-desc"),
+      },
+      {
+        id: "filter-all",
+        label: "Show all projects",
+        disabled: projectFilter === "all",
+        onSelect: () => setProjectFilter("all"),
+      },
+      {
+        id: "filter-with-chats",
+        label: "Only projects with chats",
+        disabled: projectFilter === "with-chats",
+        onSelect: () => setProjectFilter("with-chats"),
+      },
+      {
+        id: "filter-without-chats",
+        label: "Only projects without chats",
+        disabled: projectFilter === "without-chats",
+        onSelect: () => setProjectFilter("without-chats"),
+      },
+    ],
+    [projectFilter, projectSort],
   );
 
   const openCreate = useCallback(() => {
@@ -71,6 +198,12 @@ function CollectionsSidebar({
 
   const moveProject = useCallback(
     async (projectId: string, collectionId: string | null, position: number) => {
+      const sourceCollectionId =
+        collectionsState.collections.find((collection) =>
+          collection.projectIds.includes(projectId),
+        )?.id ?? null;
+      if (sourceCollectionId === null && collectionId === null) return;
+
       await collectionsState.moveProject(projectId, collectionId, position);
       toast.success(
         collectionId === null ? "Project removed from collection" : "Project moved",
@@ -208,8 +341,23 @@ function CollectionsSidebar({
             ))}
           </ul>
 
+          {model.collections.length === 0 ? (
+            <div className="mx-1.5 rounded-md border border-dashed border-border/70 px-3 py-4 text-center">
+              <p className="text-[11px] text-muted-foreground">
+                No collections yet
+              </p>
+              <button
+                type="button"
+                className="mt-1 text-[11px] font-medium text-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                onClick={openCreate}
+              >
+                Create your first collection
+              </button>
+            </div>
+          ) : null}
+
           <div
-            className={`mt-2 border-t border-border/60 pt-2 ${
+            className={`mt-3 border-t border-border/60 pt-2 ${
               looseDropActive ? "rounded-md bg-sidebar-accent/50" : ""
             }`}
             data-loose-projects-drop-target=""
@@ -227,9 +375,40 @@ function CollectionsSidebar({
             }}
             onDrop={handleLooseDrop}
           >
-            {model.looseProjects.length > 0 ? (
-              <ul className="space-y-px" aria-label="Other projects">
-                {model.looseProjects.map((entry, index) => (
+            <div className="group mb-1 flex items-center justify-between px-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Projects
+              </span>
+              <div className="flex items-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-muted-foreground"
+                  aria-label={projectsExpanded ? "Collapse all projects" : "Show all projects"}
+                  onClick={() => setProjectsExpanded((current) => !current)}
+                >
+                  <Icon
+                    name="ChevronDown"
+                    className={`size-4 transition-transform motion-reduce:transition-none ${
+                      projectsExpanded ? "rotate-180" : ""
+                    }`}
+                    aria-hidden="true"
+                  />
+                </Button>
+                <ActionMenu
+                  label="Sort and filter projects"
+                  items={projectViewItems}
+                  triggerClassName="opacity-100"
+                >
+                  <Icon name="SlidersHorizontal" className="size-4" aria-hidden="true" />
+                </ActionMenu>
+              </div>
+            </div>
+
+            {visibleLooseProjects.length > 0 ? (
+              <ul className="space-y-px" aria-label="Projects">
+                {visibleLooseProjects.map((entry, index) => (
                   <ProjectGroup
                     key={entry.project.id}
                     project={entry.project}
@@ -241,31 +420,85 @@ function CollectionsSidebar({
                     projectIndex={index}
                     onMoveProject={moveProject}
                     onError={reportError}
+                    expandedOverride={projectsExpanded}
                   />
                 ))}
               </ul>
             ) : (
               <p className="px-2 py-1 text-[11px] text-muted-foreground">
-                No projects outside a collection
+                {model.looseProjects.length === 0
+                  ? "No ungrouped projects"
+                  : "No projects match this filter"}
               </p>
             )}
           </div>
 
           {model.personalProject !== null ? (
-            <div className="mt-1 border-t border-border/40 pt-1">
-              <ul aria-label="Threads project">
-                <ProjectGroup
-                  project={model.personalProject.project}
-                  threads={model.personalProject.threads}
-                  activeThreadId={activeThreadId}
-                  onNavigate={onNavigate}
-                  currentCollectionId={null}
-                  collections={[]}
-                  projectIndex={0}
-                  onMoveProject={moveProject}
-                  onError={reportError}
-                />
-              </ul>
+            <div className="mt-3 border-t border-border/60 pt-2">
+              <div className="mb-1 flex items-center justify-between px-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Chats
+                </span>
+                <div className="flex items-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 text-muted-foreground"
+                    aria-label={chatsExpanded ? "Collapse all chats" : "Show all chats"}
+                    onClick={() => setChatsExpanded((current) => !current)}
+                  >
+                    <Icon
+                      name="ChevronDown"
+                      className={`size-4 transition-transform motion-reduce:transition-none ${
+                        chatsExpanded ? "rotate-180" : ""
+                      }`}
+                      aria-hidden="true"
+                    />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 text-muted-foreground"
+                    aria-label="New chat"
+                    onClick={() =>
+                      threadActions.openNewThread({
+                        projectId: model.personalProject!.project.id,
+                        focusPrompt: true,
+                      })
+                    }
+                  >
+                    <Icon name="MessageSquarePlus" className="size-4" aria-hidden="true" />
+                  </Button>
+                  <ActionMenu
+                    label="Sort and filter chats"
+                    items={chatViewItems}
+                    triggerClassName="opacity-100"
+                  >
+                    <Icon name="SlidersHorizontal" className="size-4" aria-hidden="true" />
+                  </ActionMenu>
+                </div>
+              </div>
+
+              {chatsExpanded ? (
+                visibleChats.length > 0 ? (
+                  <ul className="space-y-px" aria-label="Chats">
+                    {visibleChats.map((thread) => (
+                      <ThreadRow
+                        key={thread.id}
+                        thread={thread}
+                        activeThreadId={activeThreadId}
+                        onNavigate={onNavigate}
+                      />
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="px-2 py-1 text-[11px] text-muted-foreground">
+                    {chatFilter === "all" ? "No chats yet" : "No chats match this filter"}
+                  </p>
+                )
+              ) : null}
             </div>
           ) : null}
         </>
@@ -318,7 +551,7 @@ function CollectionsDisclosure({
 export default definePluginApp((app) => {
   app.slots.experimental_threadList({
     id: "collections",
-    title: "Collections sidebar",
+    title: "Hmm Sidebar",
     description:
       "Group BB projects into collapsible collections and keep active chats visible.",
     component: CollectionsThreadList,

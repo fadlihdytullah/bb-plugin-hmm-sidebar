@@ -7,7 +7,7 @@ export default defineConfig({
     },
   },
   test: {
-    name: "bb-plugin-collections-sidebar",
+    name: "bb-plugin-hmm-sidebar",
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["node_modules/**"],
   },

@@ -255,6 +255,18 @@ export default async function plugin(bb: BbPluginApi) {
       await moveProject(projectId, collectionId, position);
       return { ok: true as const };
     },
+    projects_rename: async ({ projectId, name }) => {
+      await assertAssignableProject(projectId);
+      await bb.sdk.projects.update({ projectId, name });
+      return { ok: true as const };
+    },
+    projects_delete: async ({ projectId }) => {
+      await assertAssignableProject(projectId);
+      await bb.sdk.projects.delete({ projectId });
+      db.prepare("DELETE FROM collection_projects WHERE project_id = ?").run(projectId);
+      publishChanged();
+      return { deleted: true as const };
+    },
     projects_reorder: async ({ collectionId, projectIds }) => {
       await reorderProjects(collectionId, projectIds);
       return { ok: true as const };

@@ -54,6 +54,16 @@ export const rpcContract = defineRpcContract({
       .strict(),
     output: z.object({ ok: z.literal(true) }).strict(),
   },
+  projects_rename: {
+    input: z
+      .object({ projectId, name: z.string().trim().min(1).max(120) })
+      .strict(),
+    output: z.object({ ok: z.literal(true) }).strict(),
+  },
+  projects_delete: {
+    input: z.object({ projectId }).strict(),
+    output: z.object({ deleted: z.literal(true) }).strict(),
+  },
   projects_reorder: {
     input: z
       .object({ collectionId, projectIds: orderedIds })

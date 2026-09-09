@@ -1,5 +1,5 @@
 {
-  "name": "bb-plugin-collections-sidebar",
+  "name": "bb-plugin-hmm-sidebar",
   "version": "0.1.0",
   "type": "module",
   "engines": {
@@ -7,7 +7,7 @@
     "bbPluginSdk": ">=0.4.47"
   },
   "bb": {
-    "name": "Collections Sidebar",
+    "name": "Hmm Sidebar",
     "description": "Organize BB projects into collapsible collections while keeping Active Chats visible.",
     "branding": {
       "icon": "Folder"
