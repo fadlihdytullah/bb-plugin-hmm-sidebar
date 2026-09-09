@@ -10,7 +10,7 @@ import {
 import { toast } from "sonner";
 import { ActionMenu, type ActionMenuItem } from "@/components/action-menu";
 import { ActivityPanel } from "@/components/activity-panel";
-import { CollectionDialog } from "@/components/collection-dialog";
+import { NameDialog } from "@/components/name-dialog";
 import { CollectionRow } from "@/components/collection-row";
 import {
   hasDragType,
@@ -510,9 +510,17 @@ function CollectionsSidebar({
         </p>
       ) : null}
 
-      <CollectionDialog
+      <NameDialog
         open={dialogOpen}
-        collection={editingCollection}
+        title={editingCollection === null ? "New collection" : "Rename collection"}
+        description={
+          editingCollection === null
+            ? "Group related BB projects together in the sidebar."
+            : "Choose a name for this collection. Projects and threads stay unchanged."
+        }
+        initialName={editingCollection?.name ?? ""}
+        submitLabel={editingCollection === null ? "Create" : "Save"}
+        placeholder="e.g. Work projects"
         onOpenChange={setDialogOpen}
         onSubmit={submitCollection}
       />

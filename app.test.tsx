@@ -291,7 +291,6 @@ describe("Hmm Sidebar app", () => {
   it("renames and deletes a project from its action menu", async () => {
     const renameProject = vi.fn(() => ({ ok: true as const }));
     const deleteProject = vi.fn(() => ({ deleted: true as const }));
-    vi.spyOn(window, "prompt").mockReturnValue("Platform");
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
@@ -309,6 +308,9 @@ describe("Hmm Sidebar app", () => {
     const trigger = await slot.findByRole("button", { name: "Actions for Engineering" });
     fireEvent.click(trigger);
     fireEvent.click(slot.getByRole("menuitem", { name: "Rename project" }));
+    const nameInput = await slot.findByLabelText("Name");
+    fireEvent.change(nameInput, { target: { value: "Platform" } });
+    fireEvent.click(slot.getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(renameProject).toHaveBeenCalledWith({
         projectId: "project-1",

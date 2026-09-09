@@ -10,31 +10,41 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { Collection } from "@/contract";
 
-export function CollectionDialog({
+/**
+ * Electron's renderer does not implement `window.prompt`, so every rename in
+ * this plugin goes through this dialog instead of a native prompt.
+ */
+export function NameDialog({
   open,
-  collection,
+  title,
+  description,
+  initialName,
+  submitLabel = "Save",
+  placeholder,
   onOpenChange,
   onSubmit,
 }: {
   open: boolean;
-  collection: Collection | null;
+  title: string;
+  description?: string;
+  initialName: string;
+  submitLabel?: string;
+  placeholder?: string;
   onOpenChange: (open: boolean) => void;
   onSubmit: (name: string) => Promise<void>;
 }) {
-  const [name, setName] = useState(collection?.name ?? "");
+  const [name, setName] = useState(initialName);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isEditing = collection !== null;
 
   useEffect(() => {
     if (open) {
-      setName(collection?.name ?? "");
+      setName(initialName);
       setBusy(false);
       setError(null);
     }
-  }, [collection, open]);
+  }, [initialName, open]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -56,22 +66,20 @@ export function CollectionDialog({
     <Dialog open={open} onOpenChange={(nextOpen) => !busy && onOpenChange(nextOpen)}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Rename collection" : "New collection"}</DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Choose a name for this collection. Projects and threads stay unchanged."
-              : "Group related BB projects together in the sidebar."}
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          {description !== undefined ? (
+            <DialogDescription>{description}</DialogDescription>
+          ) : null}
         </DialogHeader>
         <form onSubmit={submit} className="grid gap-4">
-          <label className="grid gap-1.5 text-xs font-medium" htmlFor="collection-name">
+          <label className="grid gap-1.5 text-xs font-medium" htmlFor="name-dialog-input">
             Name
             <Input
-              id="collection-name"
+              id="name-dialog-input"
               value={name}
               maxLength={120}
               autoFocus
-              placeholder="e.g. Work projects"
+              placeholder={placeholder}
               onChange={(event) => setName(event.target.value)}
               disabled={busy}
             />
@@ -88,7 +96,7 @@ export function CollectionDialog({
               </Button>
             </DialogClose>
             <Button type="submit" disabled={busy || name.trim().length === 0}>
-              {busy ? "Saving…" : isEditing ? "Save" : "Create"}
+              {busy ? "Saving…" : submitLabel}
             </Button>
           </DialogFooter>
         </form>

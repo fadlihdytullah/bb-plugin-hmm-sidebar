@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   experimental_useSidebarThreadActions,
   experimental_useSidebarThreadSplit,
@@ -5,6 +6,7 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
 import { ActionMenu } from "@/components/action-menu";
+import { NameDialog } from "@/components/name-dialog";
 import { Icon } from "@/components/ui/icon";
 import { threadTitle } from "@/lib/sidebar-model";
 
@@ -43,6 +45,7 @@ export function ThreadRow({
 }) {
   const actions = experimental_useSidebarThreadActions();
   const { splitProps } = experimental_useSidebarThreadSplit(thread.id);
+  const [renameOpen, setRenameOpen] = useState(false);
   const title = threadTitle(thread);
   const isActive = thread.id === activeThreadId;
 
@@ -104,12 +107,7 @@ export function ThreadRow({
             {
               id: "rename",
               label: "Rename thread",
-              onSelect: () => {
-                const nextTitle = window.prompt("Rename thread", title)?.trim();
-                if (nextTitle && nextTitle !== title) {
-                  void actions.rename(thread.id, nextTitle).catch(reportError);
-                }
-              },
+              onSelect: () => setRenameOpen(true),
             },
             {
               id: "archive",
@@ -127,6 +125,15 @@ export function ThreadRow({
           <Icon name="MoreHorizontal" className="size-4" aria-hidden="true" />
         </ActionMenu>
       </div>
+      <NameDialog
+        open={renameOpen}
+        title="Rename thread"
+        initialName={title}
+        onOpenChange={setRenameOpen}
+        onSubmit={async (nextTitle) => {
+          if (nextTitle !== title) await actions.rename(thread.id, nextTitle);
+        }}
+      />
     </li>
   );
 }

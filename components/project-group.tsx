@@ -6,6 +6,7 @@ import {
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { ActionMenu } from "@/components/action-menu";
+import { NameDialog } from "@/components/name-dialog";
 import { Icon } from "@/components/ui/icon";
 import type { Collection } from "@/contract";
 import { ThreadRow } from "@/components/thread-row";
@@ -61,6 +62,7 @@ export function ProjectGroup({
   const actions = experimental_useSidebarThreadActions();
   const rpc = useRpc<typeof rpcContract>();
   const [expanded, setExpanded] = useState(initiallyExpanded);
+  const [renameOpen, setRenameOpen] = useState(false);
   useEffect(() => {
     if (expandedOverride !== undefined) setExpanded(expandedOverride);
   }, [expandedOverride]);
@@ -95,13 +97,7 @@ export function ProjectGroup({
       {
         id: "rename-project",
         label: "Rename project",
-        onSelect: () => {
-          const name = window.prompt("Rename project", project.name)?.trim();
-          if (!name || name === project.name) return;
-          void rpc
-            .call("projects_rename", { projectId: project.id, name })
-            .catch(onError);
-        },
+        onSelect: () => setRenameOpen(true),
       },
       ...moveItems,
       {
@@ -216,6 +212,17 @@ export function ProjectGroup({
           )}
         </ul>
       ) : null}
+      <NameDialog
+        open={renameOpen}
+        title="Rename project"
+        initialName={project.name}
+        onOpenChange={setRenameOpen}
+        onSubmit={async (name) => {
+          if (name !== project.name) {
+            await rpc.call("projects_rename", { projectId: project.id, name });
+          }
+        }}
+      />
     </li>
   );
 }
