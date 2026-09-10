@@ -2,6 +2,14 @@
   "name": "bb-plugin-hmm-sidebar",
   "version": "0.1.0",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fadlihdytullah/bb-plugin-hmm-sidebar.git"
+  },
+  "homepage": "https://github.com/fadlihdytullah/bb-plugin-hmm-sidebar#readme",
+  "bugs": {
+    "url": "https://github.com/fadlihdytullah/bb-plugin-hmm-sidebar/issues"
+  },
   "engines": {
     "bb": ">=0.42",
     "bbPluginSdk": ">=0.4.47"

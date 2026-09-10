@@ -1,14 +1,34 @@
 import { useCallback, useState } from "react";
 
-const STORAGE_KEY = "bb-hmm-sidebar:collapsed:v1";
+const STORAGE_KEY = "bb-plugin-hmm-sidebar:collapsed:v1";
+const LEGACY_STORAGE_KEY = "bb-hmm-sidebar:collapsed:v1";
+
+function parseCollapsed(raw: string | null): Set<string> | null {
+  if (raw === null) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return new Set(parsed.filter((value): value is string => typeof value === "string"));
+  } catch {
+    return null;
+  }
+}
 
 function readCollapsed(): Set<string> {
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === null) return new Set();
-    const parsed: unknown = JSON.parse(stored);
-    if (!Array.isArray(parsed)) return new Set();
-    return new Set(parsed.filter((value): value is string => typeof value === "string"));
+    const storage = window.localStorage;
+    const current = parseCollapsed(storage.getItem(STORAGE_KEY));
+    if (current !== null) return current;
+
+    const legacy = parseCollapsed(storage.getItem(LEGACY_STORAGE_KEY));
+    if (legacy === null) return new Set();
+
+    try {
+      storage.setItem(STORAGE_KEY, JSON.stringify([...legacy]));
+    } catch {
+      // Storage failures should not prevent using the migrated state in memory.
+    }
+    return legacy;
   } catch {
     return new Set();
   }

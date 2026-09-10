@@ -2,7 +2,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
-import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
+import type {
+  ExperimentalSidebarNavigationItem,
+  ExperimentalSidebarNavigationProps,
+  PluginSidebarThread,
+} from "@get-bb/plugin-sdk/app";
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -12,6 +16,58 @@ const PROJECT_DRAG_TYPE = "application/x-bb-collections-project";
 
 const app = await loadPluginApp(() => import("./app"));
 const threadList = app.threadLists[0]!;
+const sidebarNavigation = app.experimentalSidebarNavigations[0]!;
+
+const navigationItems: readonly ExperimentalSidebarNavigationItem[] = [
+  {
+    id: "new-thread",
+    label: "New thread",
+    icon: { kind: "host", name: "new-thread" },
+    action: { kind: "new-thread" },
+    isDisabled: false,
+    shortcut: null,
+    experimental_splitProps: {},
+  },
+  {
+    id: "search-threads",
+    label: "Search threads",
+    icon: { kind: "host", name: "search" },
+    action: { kind: "search-threads" },
+    isDisabled: false,
+    shortcut: null,
+    experimental_splitProps: {},
+  },
+  {
+    id: "extensions",
+    label: "Extensions",
+    icon: { kind: "host", name: "extensions" },
+    action: { kind: "open-extensions" },
+    isDisabled: false,
+    shortcut: null,
+    experimental_splitProps: {},
+  },
+  {
+    id: "plugin-guide",
+    label: "Plugin Guide",
+    icon: { kind: "plugin", pluginId: "docs", icon: "BookOpen" },
+    action: { kind: "open-plugin-panel", pluginId: "docs", panelId: "guide" },
+    isDisabled: false,
+    shortcut: null,
+    experimental_splitProps: {},
+  },
+];
+
+function navigationProps(
+  activate = vi.fn(),
+): ExperimentalSidebarNavigationProps {
+  return {
+    items: navigationItems,
+    activeItemId: null,
+    isCompactViewport: false,
+    experimental_activate: activate,
+    experimental_Original: () => null,
+  };
+}
 
 const listProps = {
   activeThreadId: null,
@@ -71,6 +127,76 @@ afterEach(() => {
 });
 
 describe("Hmm Sidebar app", () => {
+  it("keeps the logo and fixed actions in one official navigation header", async () => {
+    const activate = vi.fn();
+    const slot = renderSlot(sidebarNavigation, navigationProps(activate));
+    const header = await slot.findByTestId("sidebar-brand");
+    const actions = within(header).getByLabelText("Sidebar actions");
+
+    expect(app.contentScripts).toHaveLength(0);
+    expect(app.experimentalSidebarNavigations).toHaveLength(1);
+    expect(within(header).getByRole("img", { name: "BB" })).toBeTruthy();
+    expect(within(actions).getAllByRole("button")).toHaveLength(3);
+
+    fireEvent.click(within(actions).getByRole("button", { name: "New thread" }));
+    fireEvent.click(
+      within(actions).getByRole("button", { name: "Search threads" }),
+    );
+    expect(activate).toHaveBeenNthCalledWith(1, "new-thread", {
+      openInSplit: false,
+    });
+    expect(activate).toHaveBeenNthCalledWith(2, "search-threads", {
+      openInSplit: false,
+    });
+  });
+
+  it("keeps More usable after unchecking and checking every optional action", async () => {
+    const slot = renderSlot(sidebarNavigation, navigationProps());
+    const more = await slot.findByRole("button", {
+      name: "More sidebar navigation",
+    });
+
+    fireEvent.pointerDown(more, { button: 0, ctrlKey: false });
+    const extensions = await slot.findByRole("menuitem", {
+      name: "Extensions",
+    });
+    expect(extensions).toBeTruthy();
+    expect(document.body.style.pointerEvents).not.toBe("none");
+    expect(more.closest("header")?.contains(extensions)).toBe(true);
+    fireEvent.click(slot.getByRole("menuitem", { name: "Customize sidebar" }));
+
+    const newThread = await slot.findByRole("menuitemcheckbox", {
+      name: "New thread",
+    });
+    const searchThreads = slot.getByRole("menuitemcheckbox", {
+      name: "Search threads",
+    });
+    expect(newThread.getAttribute("aria-checked")).toBe("true");
+    expect(newThread.getAttribute("aria-disabled")).toBe("true");
+    expect(searchThreads.getAttribute("aria-checked")).toBe("true");
+    expect(searchThreads.getAttribute("aria-disabled")).toBe("true");
+
+    fireEvent.click(slot.getByRole("button", { name: "Uncheck all" }));
+    expect(
+      slot
+        .getByRole("menuitemcheckbox", { name: "Extensions" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+    fireEvent.click(slot.getByRole("button", { name: "Check all" }));
+    expect(
+      slot
+        .getByRole("menuitemcheckbox", { name: "Extensions" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    fireEvent.click(slot.getByRole("menuitem", { name: "Done" }));
+    await waitFor(() =>
+      expect(more.getAttribute("aria-expanded")).toBe("false"),
+    );
+
+    fireEvent.pointerDown(more, { button: 0, ctrlKey: false });
+    expect(await slot.findByRole("menuitem", { name: "Plugin Guide" })).toBeTruthy();
+  });
+
   it("registers one replacement list and renders collections above projects", async () => {
     expect(app.threadLists).toHaveLength(1);
     expect(threadList.id).toBe("collections");

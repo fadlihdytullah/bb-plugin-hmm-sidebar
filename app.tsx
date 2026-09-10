@@ -18,6 +18,7 @@ import {
   ProjectGroup,
 } from "@/components/project-group";
 import { ThreadRow } from "@/components/thread-row";
+import { CompactSidebarNavigation } from "@/components/sidebar-navigation";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { useCollapsedCollections } from "@/hooks/use-collapsed-collections";
@@ -49,6 +50,62 @@ type ProjectSort = "name-asc" | "name-desc";
 type ProjectFilter = "all" | "with-chats" | "without-chats";
 type ChatSort = "recent" | "oldest" | "name-asc";
 type ChatFilter = "all" | "unread" | "pinned";
+
+function SidebarHeader({
+  onCreateCollection,
+  onRefresh,
+}: {
+  onCreateCollection: () => void;
+  onRefresh: () => void;
+}) {
+  const items: readonly ActionMenuItem[] = [
+    {
+      id: "create-collection",
+      label: "Create collection",
+      onSelect: onCreateCollection,
+    },
+    {
+      id: "refresh-sidebar",
+      label: "Refresh sidebar",
+      onSelect: onRefresh,
+    },
+  ];
+
+  return (
+    <header
+      aria-label="Hmm Sidebar"
+      className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 px-3 py-3"
+      data-testid="sidebar-brand"
+    >
+      <div className="flex min-w-0 items-center gap-2.5">
+        <div
+          role="img"
+          aria-label="BB"
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background"
+        >
+          <span className="select-none text-[13px] font-semibold leading-none tracking-[-0.12em]">
+            bb
+          </span>
+        </div>
+        <div className="min-w-0">
+          <h1 className="truncate text-[13px] font-semibold leading-5 text-foreground">
+            Hmm Sidebar
+          </h1>
+          <p className="truncate text-[10px] leading-4 text-muted-foreground">
+            Collections &amp; chats
+          </p>
+        </div>
+      </div>
+      <ActionMenu
+        label="Hmm Sidebar options"
+        items={items}
+        triggerClassName="opacity-100"
+      >
+        <Icon name="MoreHorizontal" className="size-4" aria-hidden="true" />
+      </ActionMenu>
+    </header>
+  );
+}
 
 function CollectionsSidebar({
   activeThreadId,
@@ -275,7 +332,13 @@ function CollectionsSidebar({
       className="flex h-full min-h-0 flex-col"
       onDragEnd={() => setLooseDropActive(false)}
     >
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-2">
+      {!includeActivity ? (
+        <SidebarHeader
+          onCreateCollection={openCreate}
+          onRefresh={() => void collectionsState.refresh()}
+        />
+      ) : null}
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-3">
       <div className="mb-1 flex items-center justify-between px-1.5">
         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           Collections
@@ -557,6 +620,13 @@ function CollectionsDisclosure({
 }
 
 export default definePluginApp((app) => {
+  app.slots.experimental_sidebarNavigation({
+    id: "compact-actions",
+    title: "Hmm Sidebar actions",
+    description:
+      "Keep New thread and Search threads visible, with remaining navigation inside More.",
+    component: CompactSidebarNavigation,
+  });
   app.slots.experimental_threadList({
     id: "collections",
     title: "Hmm Sidebar",

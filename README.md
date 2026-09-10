@@ -1,9 +1,21 @@
 # Hmm Sidebar
 
 Groups BB projects into collapsible Collections while keeping the built-in
-thread actions, keyboard shortcuts, and split navigation.
+thread actions, keyboard shortcuts, and split navigation. The primary sidebar
+header is a single horizontal action bar: the BB logo stays on the left, while
+New thread, Search threads, and More are compact icon buttons. New thread and
+Search threads are always visible and cannot be unchecked; More always opens the
+remaining navigation and a compact Customize sidebar menu.
 
-Install the plugin from this directory:
+Repository: [fadlihdytullah/bb-plugin-hmm-sidebar](https://github.com/fadlihdytullah/bb-plugin-hmm-sidebar)
+
+Install the plugin from the repository:
+
+```sh
+bb plugin install https://github.com/fadlihdytullah/bb-plugin-hmm-sidebar.git
+```
+
+For local development, install it from this directory:
 
 ```sh
 bb plugin install .
@@ -14,6 +26,11 @@ BB allows only one plugin to replace the thread list, so this plugin includes
 the **Active Chats Sidebar** activity panel when it is selected. If
 `active-chats-sidebar` is selected instead, the Collections folder button is
 available in the sidebar footer as an additive disclosure.
+
+Select **Hmm Sidebar actions** under **Settings → Appearance → Navigation** to
+use the compact action bar. In **Customize sidebar**, optional host and plugin
+actions can be checked or unchecked and the choice is remembered per BB client;
+New thread and Search threads remain checked at all times.
 
 Active chats continue to appear automatically while agents are working or
 need attention. Pin a chat anywhere in BB—or directly from Activity or
