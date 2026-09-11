@@ -43,6 +43,12 @@ Active chats continue to appear automatically while agents are working or
 need attention. Pin a chat anywhere in BB—or directly from Activity or
 Recents—to keep it in Activity while it is idle.
 
+Press **Cmd+E** to open the floating Activity palette from anywhere in BB.
+Search by thread title or project, move through Currently active, Needs
+attention, Pinned, and Recents with the arrow keys, press **Enter** to open a
+thread, or **Cmd+Enter** to open it in a split. The palette is centered within
+BB's main chat container.
+
 Collections are plugin-owned state. Create one with the folder-plus button,
 drag projects into it, or use a project's action menu. The Collections header
 also includes a collapse/expand-all button beside New collection. Collection

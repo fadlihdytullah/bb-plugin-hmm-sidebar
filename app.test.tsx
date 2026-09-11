@@ -17,6 +17,7 @@ const PROJECT_DRAG_TYPE = "application/x-bb-collections-project";
 const app = await loadPluginApp(() => import("./app"));
 const threadList = app.threadLists[0]!;
 const sidebarNavigation = app.experimentalSidebarNavigations[0]!;
+const activityPalette = app.appOverlays[0]!;
 
 const navigationItems: readonly ExperimentalSidebarNavigationItem[] = [
   {
@@ -127,6 +128,34 @@ afterEach(() => {
 });
 
 describe("Hmm Sidebar app", () => {
+  it("registers an app-wide Activity palette", () => {
+    expect(app.appOverlays).toHaveLength(1);
+    expect(activityPalette.id).toBe("activity-palette");
+  });
+
+  it("centers Activity inside the chat container", async () => {
+    const chatContainer = document.createElement("main");
+    chatContainer.dataset.sidebar = "inset";
+    document.body.append(chatContainer);
+
+    const slot = renderSlot(activityPalette, {}, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [runningThread("Build API", "project-1")],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+      },
+    });
+
+    fireEvent.keyDown(document, { key: "e", metaKey: true });
+    await waitFor(() =>
+      expect(chatContainer.querySelector('[data-testid="activity-palette"]')).toBeTruthy(),
+    );
+    expect(chatContainer.querySelector("[data-bb-plugin-root]")).toBeTruthy();
+
+    slot.unmount();
+    chatContainer.remove();
+  });
+
   it("keeps the logo and fixed actions in one official navigation header", async () => {
     const activate = vi.fn();
     const slot = renderSlot(sidebarNavigation, navigationProps(activate));
@@ -637,5 +666,86 @@ describe("Hmm Sidebar app", () => {
     );
 
     expect(await slot.findByText("Work")).toBeTruthy();
+  });
+
+  it("opens Activity with Cmd+E and searches by title or project", async () => {
+    const slot = renderSlot(activityPalette, {}, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [runningThread("Build API", "project-1"), thread("Personal note", "threads")],
+        projects: [
+          { id: "project-1", name: "Engineering", isPersonal: false },
+          { id: "threads", name: "Threads", isPersonal: true },
+        ],
+      },
+    });
+
+    fireEvent.keyDown(document, { key: "e", metaKey: true });
+    const palette = await slot.findByTestId("activity-palette");
+    const input = within(palette).getByRole("combobox", { name: "Search Activity" });
+    fireEvent.change(input, { target: { value: "engineering" } });
+
+    expect(within(palette).getByRole("option", { name: /Build API, Engineering/ })).toBeTruthy();
+    expect(within(palette).queryByRole("option", { name: /Personal note/ })).toBeNull();
+
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(slot.inspection.sidebarActionCalls).toContainEqual({
+      method: "open",
+      threadId: "Build API",
+      options: { split: false },
+    });
+  });
+
+  it("navigates Activity with arrows and opens Cmd+Enter in a split", async () => {
+    const slot = renderSlot(activityPalette, {}, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [
+          { ...thread("Needs review", "project-1"), hasPendingInteraction: true },
+          runningThread("Build API", "project-1"),
+        ],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+      },
+    });
+
+    fireEvent.keyDown(document, { key: "e", metaKey: true });
+    const palette = await slot.findByTestId("activity-palette");
+    const input = within(palette).getByRole("combobox", { name: "Search Activity" });
+    const options = within(palette).getAllByRole("option");
+    expect(options[0]?.getAttribute("aria-selected")).toBe("true");
+
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    expect(options[1]?.getAttribute("aria-selected")).toBe("true");
+    fireEvent.keyDown(input, { key: "Enter", metaKey: true });
+
+    expect(slot.inspection.sidebarActionCalls).toContainEqual({
+      method: "open",
+      threadId: "Build API",
+      options: { split: true },
+    });
+  });
+
+  it("keeps Activity sections distinct and closes with Escape", async () => {
+    const slot = renderSlot(activityPalette, {}, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [
+          { ...thread("Needs review", "project-1"), isUnread: true },
+          runningThread("Build API", "project-1"),
+          { ...thread("Pinned note", "project-1"), isPinned: true },
+        ],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+      },
+    });
+
+    fireEvent.keyDown(document, { key: "e", metaKey: true });
+    const palette = await slot.findByTestId("activity-palette");
+    expect(within(palette).getByRole("group", { name: "Needs attention" })).toBeTruthy();
+    expect(within(palette).getByRole("group", { name: "Currently active" })).toBeTruthy();
+    expect(within(palette).getByRole("group", { name: "Pinned" })).toBeTruthy();
+    expect(within(palette).getAllByRole("option")).toHaveLength(3);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(slot.queryByTestId("activity-palette")).toBeNull());
   });
 });

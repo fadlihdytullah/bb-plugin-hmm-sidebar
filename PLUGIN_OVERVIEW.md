@@ -22,6 +22,10 @@ database and updates are broadcast to other open clients.
 The sidebar also keeps the Active Chats activity panel visible. Working chats
 appear automatically, while pinned chats remain visible after becoming idle.
 BB's native pin state is respected and can be toggled from Activity or Recents.
+The same Activity view is available as a floating palette with **Cmd+E**;
+search matches thread titles and project names, arrow keys move through the
+results, **Enter** opens the selected thread, and **Cmd+Enter** opens a split.
+The palette is centered within BB's main chat container.
 Because BB's thread-list replacement slot is exclusive, selecting Hmm Sidebar uses
 one composed list; selecting Active Chats Sidebar keeps its list and exposes
 Collections through the footer disclosure.

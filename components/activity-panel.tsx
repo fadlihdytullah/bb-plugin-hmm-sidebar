@@ -3,102 +3,18 @@ import {
   experimental_useSidebarThreadActions,
   type PluginSidebarProject,
   type PluginSidebarThread,
-  type PluginSidebarThreadIndicator,
 } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
 import { forgetRecent, rememberRecent, useRecents } from "@/hooks/use-recents";
 import { Icon } from "@/components/ui/icon";
-
-const ACTIVITY_KEYS = [
-  "workflows",
-  "backgroundAgents",
-  "backgroundCommands",
-  "planMode",
-  "goals",
-] as const;
-
-const RUNNING_INDICATORS = new Set<PluginSidebarThreadIndicator>([
-  "background-agent",
-  "background-command",
-  "goal",
-  "plan-mode",
-  "runtime",
-  "workflow",
-]);
-
-type ActivityStatus = "running" | "unread" | "attention" | "error" | "idle";
-
-type ActivityStatusDefinition = {
-  id: ActivityStatus;
-  label: string;
-  dotClassName: string;
-  matches: (thread: PluginSidebarThread) => boolean;
-};
-
-const ACTIVITY_STATUSES: readonly ActivityStatusDefinition[] = [
-  {
-    id: "error",
-    label: "Error",
-    dotClassName: "bg-destructive",
-    matches: (thread) => thread.indicator === "unread-error",
-  },
-  {
-    id: "attention",
-    label: "Needs attention",
-    dotClassName: "bg-amber-500",
-    matches: (thread) =>
-      thread.hasPendingInteraction || thread.indicator === "waiting-for-input",
-  },
-  {
-    id: "running",
-    label: "Running",
-    dotClassName: "animate-pulse bg-emerald-500",
-    matches: (thread) =>
-      RUNNING_INDICATORS.has(thread.indicator) || hasLiveActivity(thread),
-  },
-  {
-    id: "unread",
-    label: "Unread",
-    dotClassName: "bg-primary",
-    matches: (thread) => thread.isUnread,
-  },
-];
-
-const IDLE_STATUS: ActivityStatusDefinition = {
-  id: "idle",
-  label: "Idle",
-  dotClassName: "bg-muted-foreground/50",
-  matches: () => false,
-};
-
-function threadTitle(thread: PluginSidebarThread): string {
-  return (
-    thread.title?.trim() || thread.titleFallback?.trim() || "Untitled thread"
-  );
-}
-
-function hasLiveActivity(thread: PluginSidebarThread): boolean {
-  return ACTIVITY_KEYS.some((key) => thread.activity[key] > 0);
-}
-
-function projectTag(
-  thread: PluginSidebarThread,
-  projects: readonly PluginSidebarProject[],
-): string {
-  const project = projects.find((candidate) => candidate.id === thread.projectId);
-  if (!project || project.isPersonal) return "#threads";
-  return `#${project.name.trim().toLowerCase() || "threads"}`;
-}
-
-function statusForThread(
-  thread: PluginSidebarThread,
-): ActivityStatusDefinition | null {
-  return ACTIVITY_STATUSES.find((status) => status.matches(thread)) ?? null;
-}
-
-function activityTimestamp(thread: PluginSidebarThread): number {
-  return Math.max(thread.latestAttentionAt, thread.updatedAt);
-}
+import {
+  activityTimestamp,
+  IDLE_STATUS,
+  projectTag,
+  statusForThread,
+  threadTitle,
+  type ActivityStatusDefinition,
+} from "@/lib/activity-model";
 
 function ActivityDot({
   status,
