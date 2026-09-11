@@ -114,7 +114,7 @@ function CollectionsSidebar({
 }: CollectionsViewProps) {
   const { status, threads, projects } = experimental_useSidebarThreads();
   const collectionsState = useCollections();
-  const { isCollapsed, toggle } = useCollapsedCollections();
+  const { isCollapsed, setAll, toggle } = useCollapsedCollections();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [looseDropActive, setLooseDropActive] = useState(false);
@@ -130,6 +130,12 @@ function CollectionsSidebar({
     () => buildSidebarModel(collectionsState.collections, projects, threads),
     [collectionsState.collections, projects, threads],
   );
+  const collectionIds = useMemo(
+    () => model.collections.map(({ collection }) => collection.id),
+    [model.collections],
+  );
+  const allCollectionsCollapsed =
+    collectionIds.length > 0 && collectionIds.every(isCollapsed);
 
   const visibleLooseProjects = useMemo(() => {
     const filtered = model.looseProjects.filter((entry) => {
@@ -343,16 +349,38 @@ function CollectionsSidebar({
         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           Collections
         </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-7 text-muted-foreground"
-          aria-label="Create collection"
-          onClick={openCreate}
-        >
-          <Icon name="FolderPlus" className="size-4" aria-hidden="true" />
-        </Button>
+        <div className="flex items-center">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground"
+            aria-label={
+              allCollectionsCollapsed
+                ? "Show all collections"
+                : "Collapse all collections"
+            }
+            onClick={() => setAll(collectionIds, !allCollectionsCollapsed)}
+          >
+            <Icon
+              name="ChevronDown"
+              className={`size-4 transition-transform motion-reduce:transition-none ${
+                allCollectionsCollapsed ? "" : "rotate-180"
+              }`}
+              aria-hidden="true"
+            />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground"
+            aria-label="Create collection"
+            onClick={openCreate}
+          >
+            <Icon name="FolderPlus" className="size-4" aria-hidden="true" />
+          </Button>
+        </div>
       </div>
 
       {collectionsState.error !== null ? (

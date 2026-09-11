@@ -63,5 +63,23 @@ export function useCollapsedCollections() {
     [collapsed],
   );
 
-  return { isCollapsed, toggle };
+  const setAll = useCallback(
+    (collectionIds: readonly string[], shouldCollapse: boolean) => {
+      setCollapsed((current) => {
+        const next = new Set(current);
+        collectionIds.forEach((collectionId) => {
+          if (shouldCollapse) {
+            next.add(collectionId);
+          } else {
+            next.delete(collectionId);
+          }
+        });
+        persistCollapsed(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  return { isCollapsed, setAll, toggle };
 }

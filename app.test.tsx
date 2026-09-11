@@ -361,6 +361,35 @@ describe("Hmm Sidebar app", () => {
     expect(slot.getByText("Build API")).toBeTruthy();
   });
 
+  it("collapses and expands all collections from the Collections header", async () => {
+    const slot = renderSlot(threadList, listProps, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [thread("Build API", "project-1")],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+      },
+      rpc: {
+        collections_list: () => ({
+          collections: [
+            { id: "collection-1", name: "Work", position: 0, projectIds: ["project-1"] },
+          ],
+        }),
+      },
+    });
+
+    await slot.findByText("Build API");
+    fireEvent.click(slot.getByRole("button", { name: "Collapse all collections" }));
+    expect(slot.queryByText("Build API")).toBeNull();
+    expect(slot.getByRole("button", { name: "Show all collections" })).toBeTruthy();
+
+    fireEvent.click(slot.getByRole("button", { name: "Show all collections" }));
+    expect(slot.getByText("Engineering")).toBeTruthy();
+    expect(slot.queryByText("Build API")).toBeNull();
+
+    fireEvent.click(slot.getByRole("button", { name: "Expand Engineering" }));
+    expect(slot.getByText("Build API")).toBeTruthy();
+  });
+
   it("keeps an individual thread action menu above its row", async () => {
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {

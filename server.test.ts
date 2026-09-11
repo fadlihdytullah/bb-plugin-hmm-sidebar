@@ -8,7 +8,7 @@ const deleteProject = vi.fn(async () => ({ ok: true }));
 
 async function startHost() {
   const host = createFakePluginHost({
-    pluginId: "hmm-sidebar",
+    pluginId: "bb-plugin-hmm-sidebar",
     sdk: {
       projects: {
         list: async () => [
