@@ -133,7 +133,7 @@ describe("Hmm Sidebar app", () => {
     expect(activityPalette.id).toBe("activity-palette");
   });
 
-  it("centers Activity inside the chat container", async () => {
+  it("positions Activity at the top center of the chat container", async () => {
     const chatContainer = document.createElement("main");
     chatContainer.dataset.sidebar = "inset";
     document.body.append(chatContainer);
@@ -153,6 +153,11 @@ describe("Hmm Sidebar app", () => {
       expect(chatContainer.querySelector('[data-testid="activity-palette"]')).toBeTruthy(),
     );
     expect(chatContainer.querySelector("[data-bb-plugin-root]")).toBeTruthy();
+    const paletteElement = chatContainer.querySelector<HTMLElement>(
+      '[data-testid="activity-palette"]',
+    );
+    expect(paletteElement?.className).toContain("!top-[15%]");
+    expect(paletteElement?.className).toContain("!translate-y-0");
 
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() =>

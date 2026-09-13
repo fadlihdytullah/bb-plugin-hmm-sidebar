@@ -178,7 +178,7 @@ export function ActivityPalette() {
       <DialogContent
         data-testid="activity-palette"
         className={`max-w-xl gap-0 overflow-hidden p-0 ${
-          isChatScoped ? "!absolute" : ""
+          isChatScoped ? "!absolute !top-[15%] !translate-y-0" : ""
         }`}
         hideCloseButton
         overlayClassName={isChatScoped ? "!absolute" : undefined}
