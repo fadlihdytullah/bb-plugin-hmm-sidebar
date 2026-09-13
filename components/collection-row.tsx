@@ -20,7 +20,6 @@ function dragValue(event: DragEvent, type: string, prefix: string): string | nul
 export function CollectionRow({
   collection,
   projects,
-  allCollections,
   collectionIndex,
   expanded,
   onToggle,
@@ -34,7 +33,6 @@ export function CollectionRow({
 }: {
   collection: Collection;
   projects: readonly ProjectGroupModel[];
-  allCollections: readonly Collection[];
   collectionIndex: number;
   expanded: boolean;
   onToggle: () => void;
@@ -158,7 +156,6 @@ export function CollectionRow({
                 onNavigate={onNavigate}
                 initiallyExpanded={projectsInitiallyExpanded}
                 currentCollectionId={collection.id}
-                collections={allCollections}
                 projectIndex={index}
                 onMoveProject={onMoveProject}
                 onError={onError}

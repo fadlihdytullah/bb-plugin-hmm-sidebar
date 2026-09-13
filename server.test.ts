@@ -1,14 +1,61 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFakePluginHost } from "@get-bb/plugin-sdk/testing";
+import type { BbPluginApi } from "@get-bb/plugin-sdk";
 import plugin from "./server";
 
 const hosts: Array<ReturnType<typeof createFakePluginHost>> = [];
 const updateProject = vi.fn(async () => ({ ok: true }));
 const deleteProject = vi.fn(async () => ({ ok: true }));
 
+type ThreadRow = Awaited<ReturnType<BbPluginApi["sdk"]["threads"]["list"]>>[number];
+
+function threadRow(id: string, overrides: Partial<ThreadRow> = {}): ThreadRow {
+  return {
+    id,
+    projectId: "project-1",
+    title: id,
+    titleFallback: null,
+    parentThreadId: null,
+    sectionId: null,
+    sourceThreadId: null,
+    originKind: null,
+    originPluginId: null,
+    providerId: "codex",
+    hasPendingInteraction: false,
+    activity: {
+      activeBackgroundAgentCount: 0,
+      activeBackgroundCommandCount: 0,
+      activeGoalCount: 0,
+      activePlanModeCount: 0,
+      activeWorkflowCount: 0,
+    },
+    archivedAt: null,
+    createdAt: 1,
+    deletedAt: null,
+    environmentId: null,
+    environmentName: null,
+    environmentBranchName: null,
+    environmentHostId: null,
+    environmentWorkspaceDisplayKind: "other",
+    latestAttentionAt: 1,
+    lastReadAt: 1,
+    pinSortKey: null,
+    pinnedAt: null,
+    queuedWork: "none",
+    runtime: {
+      displayStatus: "idle",
+      hostReconnectGraceExpiresAt: null,
+    },
+    status: "idle",
+    updatedAt: 1,
+    visibility: "visible",
+    ...overrides,
+  } as ThreadRow;
+}
+
 async function startHost() {
   const host = createFakePluginHost({
-    pluginId: "bb-plugin-hmm-sidebar",
+    pluginId: "hmm-sidebar",
     sdk: {
       projects: {
         list: async () => [
@@ -130,5 +177,168 @@ describe("Hmm Sidebar backend", () => {
       collections: Array<{ projectIds: string[] }>;
     };
     expect(result.collections[0]?.projectIds).toEqual([]);
+  });
+
+  it("clears inactive threads while preserving live, attention, and error threads", async () => {
+    const rows = new Map<string, ThreadRow>([
+      ["idle", threadRow("idle")],
+      ["archived", threadRow("archived", { archivedAt: 1 })],
+      ["running", threadRow("running", { status: "active" })],
+      ["attention", threadRow("attention", { hasPendingInteraction: true })],
+      ["error", threadRow("error", { status: "error" })],
+      [
+        "activity",
+        threadRow("activity", {
+          activity: {
+            activeBackgroundAgentCount: 1,
+            activeBackgroundCommandCount: 0,
+            activeGoalCount: 0,
+            activePlanModeCount: 0,
+            activeWorkflowCount: 0,
+          },
+        }),
+      ],
+      ["queued", threadRow("queued", { queuedWork: "waiting" })],
+      ["parent", threadRow("parent")],
+      ["child", threadRow("child", { parentThreadId: "parent" })],
+      ["protected-parent", threadRow("protected-parent")],
+      [
+        "protected-child",
+        threadRow("protected-child", {
+          parentThreadId: "protected-parent",
+          status: "error",
+        }),
+      ],
+    ]);
+    const deleteThread = vi.fn(async ({
+      threadId,
+      childThreadsConfirmed,
+    }: {
+      threadId: string;
+      childThreadsConfirmed: boolean;
+    }) => {
+      if (!childThreadsConfirmed && [...rows.values()].some((row) => row.parentThreadId === threadId)) {
+        throw new Error("Thread has children");
+      }
+      rows.delete(threadId);
+      return { ok: true as const };
+    });
+    const listThreads = vi.fn(async ({
+      archived,
+    }: {
+      archived?: boolean;
+    } = {}) =>
+      [...rows.values()].filter((row) => (row.archivedAt !== null) === archived),
+    );
+    const getThread = vi.fn(async ({ threadId }: { threadId: string }) => {
+      const row = rows.get(threadId);
+      if (row === undefined) throw new Error("Thread not found");
+      return row;
+    });
+    const host = createFakePluginHost({
+      pluginId: "hmm-sidebar",
+      sdk: {
+        projects: {
+          list: async () => [
+            { id: "project-1", kind: "standard" },
+            { id: "threads", kind: "personal" },
+          ],
+          update: updateProject,
+          delete: deleteProject,
+        },
+        threads: {
+          list: listThreads,
+          get: getThread,
+          interactions: {
+            list: async () => [],
+          },
+          delete: deleteThread,
+        },
+      },
+    });
+    hosts.push(host);
+    await plugin(host.bb);
+
+    const result = (await host.harness.behavior.callRpc("projects_clear_threads", {
+      projectId: "project-1",
+    })) as { deletedCount: number; preservedCount: number };
+
+    expect(result).toEqual({ deletedCount: 4, preservedCount: 7 });
+    expect([...rows.keys()]).toEqual([
+      "running",
+      "attention",
+      "error",
+      "activity",
+      "queued",
+      "protected-parent",
+      "protected-child",
+    ]);
+    expect(deleteThread).toHaveBeenCalledTimes(5);
+    expect(deleteThread).toHaveBeenCalledWith(
+      expect.objectContaining({ childThreadsConfirmed: false }),
+    );
+    expect(deleteThread.mock.calls.map(([args]) => args.threadId)).toContain("child");
+    expect(deleteThread.mock.calls.map(([args]) => args.threadId)).toContain("parent");
+    expect(deleteThread.mock.calls.map(([args]) => args.threadId)).toContain(
+      "protected-parent",
+    );
+  });
+
+  it("clears personal chats through the dedicated RPC", async () => {
+    const rows = new Map<string, ThreadRow>([
+      ["personal-idle", threadRow("personal-idle", { projectId: "threads" })],
+      [
+        "personal-running",
+        threadRow("personal-running", { projectId: "threads", status: "active" }),
+      ],
+    ]);
+    const deleteThread = vi.fn(async ({ threadId }: { threadId: string }) => {
+      rows.delete(threadId);
+      return { ok: true as const };
+    });
+    const listThreads = vi.fn(async ({
+      projectId,
+      archived,
+    }: {
+      projectId?: string;
+      archived?: boolean;
+    } = {}) =>
+      [...rows.values()].filter(
+        (row) => row.projectId === projectId && (row.archivedAt !== null) === archived,
+      ),
+    );
+    const host = createFakePluginHost({
+      pluginId: "hmm-sidebar",
+      sdk: {
+        projects: {
+          list: async () => [{ id: "threads", kind: "personal" }],
+          update: updateProject,
+          delete: deleteProject,
+        },
+        threads: {
+          list: listThreads,
+          get: async ({ threadId }: { threadId: string }) => {
+            const row = rows.get(threadId);
+            if (row === undefined) throw new Error("Thread not found");
+            return row;
+          },
+          interactions: { list: async () => [] },
+          delete: deleteThread,
+        },
+      },
+    });
+    hosts.push(host);
+    await plugin(host.bb);
+
+    const result = await host.harness.behavior.callRpc("chats_clear", {});
+
+    expect(result).toEqual({ deletedCount: 1, preservedCount: 1 });
+    expect(deleteThread).toHaveBeenCalledWith(
+      expect.objectContaining({ threadId: "personal-idle" }),
+    );
+    expect(listThreads).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: "threads" }),
+    );
+    expect(rows.has("personal-running")).toBe(true);
   });
 });

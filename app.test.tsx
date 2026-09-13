@@ -146,11 +146,18 @@ describe("Hmm Sidebar app", () => {
       },
     });
 
+    expect(chatContainer.querySelector("[data-bb-plugin-root]")).toBeNull();
+
     fireEvent.keyDown(document, { key: "e", metaKey: true });
     await waitFor(() =>
       expect(chatContainer.querySelector('[data-testid="activity-palette"]')).toBeTruthy(),
     );
     expect(chatContainer.querySelector("[data-bb-plugin-root]")).toBeTruthy();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() =>
+      expect(chatContainer.querySelector("[data-bb-plugin-root]")).toBeNull(),
+    );
 
     slot.unmount();
     chatContainer.remove();
@@ -289,6 +296,31 @@ describe("Hmm Sidebar app", () => {
     fireEvent.click(slot.getByRole("button", { name: "Collapse all chats" }));
     expect(slot.queryByRole("list", { name: "Chats" })).toBeNull();
     expect(slot.getByRole("button", { name: "Show all chats" })).toBeTruthy();
+  });
+
+  it("confirms before clearing personal chats", async () => {
+    const clearChats = vi.fn(() => ({ deletedCount: 2, preservedCount: 1 }));
+    const slot = renderSlot(threadList, listProps, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [thread("Personal note", "threads")],
+        projects: [{ id: "threads", name: "Threads", isPersonal: true }],
+      },
+      rpc: {
+        collections_list: () => ({ collections: [] }),
+        chats_clear: clearChats,
+      },
+    });
+
+    await slot.findByText("Personal note");
+    fireEvent.click(slot.getByRole("button", { name: "Clear chats" }));
+    const dialog = await slot.findByRole("dialog");
+    expect(within(dialog).getByRole("heading", { name: "Clear chats?" })).toBeTruthy();
+    expect(within(dialog).getByText(/Running chats, chats needing attention/)).toBeTruthy();
+    expect(clearChats).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Clear chats" }));
+    await waitFor(() => expect(clearChats).toHaveBeenCalledWith({}));
   });
 
   it("groups only loose non-personal projects under the Projects header", async () => {
@@ -432,6 +464,14 @@ describe("Hmm Sidebar app", () => {
     });
 
     await slot.findByText("Build API");
+    const deleteButton = slot.getByRole("button", { name: "Delete Build API" });
+    expect(deleteButton.className).toContain("group-hover/thread:opacity-100");
+    fireEvent.click(deleteButton);
+    expect(slot.inspection.sidebarActionCalls).toContainEqual({
+      method: "requestDelete",
+      threadId: "Build API",
+    });
+
     const trigger = slot.getByRole("button", { name: "Actions for Build API" });
     fireEvent.click(trigger);
 
@@ -444,8 +484,7 @@ describe("Hmm Sidebar app", () => {
     expect(menu.closest("a")).toBeNull();
   });
 
-  it("uses the project action menu to move a project", async () => {
-    const moveProject = vi.fn(() => ({ ok: true as const }));
+  it("keeps only rename, clear, and delete in the project action menu", async () => {
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
         status: "ready",
@@ -453,29 +492,24 @@ describe("Hmm Sidebar app", () => {
         projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
       },
       rpc: {
-        collections_list: () => ({
-          collections: [{ id: "collection-1", name: "Work", position: 0, projectIds: [] }],
-        }),
-        projects_move: moveProject,
+        collections_list: () => ({ collections: [] }),
       },
     });
 
     await slot.findByRole("button", { name: "Actions for Engineering" });
     fireEvent.click(slot.getByRole("button", { name: "Actions for Engineering" }));
-    fireEvent.click(slot.getByRole("menuitem", { name: "Move to Work" }));
-    await waitFor(() =>
-      expect(moveProject).toHaveBeenCalledWith({
-        projectId: "project-1",
-        collectionId: "collection-1",
-        position: 0,
-      }),
-    );
+    expect(within(slot.getByRole("menu", { name: "Actions for Engineering" })).getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "Rename project",
+      "Clear threads",
+      "Delete project",
+    ]);
+    expect(slot.queryByRole("menuitem", { name: /Move to|Remove from collection/ })).toBeNull();
   });
 
-  it("renames and deletes a project from its action menu", async () => {
+  it("renames, clears, and deletes a project from its action menu", async () => {
     const renameProject = vi.fn(() => ({ ok: true as const }));
+    const clearThreads = vi.fn(() => ({ deletedCount: 2, preservedCount: 1 }));
     const deleteProject = vi.fn(() => ({ deleted: true as const }));
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
         status: "ready",
@@ -485,6 +519,7 @@ describe("Hmm Sidebar app", () => {
       rpc: {
         collections_list: () => ({ collections: [] }),
         projects_rename: renameProject,
+        projects_clear_threads: clearThreads,
         projects_delete: deleteProject,
       },
     });
@@ -503,7 +538,28 @@ describe("Hmm Sidebar app", () => {
     );
 
     fireEvent.click(trigger);
+    fireEvent.click(slot.getByRole("menuitem", { name: "Clear threads" }));
+    const clearDialog = await slot.findByRole("dialog");
+    expect(within(clearDialog).getByRole("heading", { name: "Clear threads?" })).toBeTruthy();
+    expect(within(clearDialog).getByText(/Running threads, threads needing attention/)).toBeTruthy();
+    expect(clearThreads).not.toHaveBeenCalled();
+    fireEvent.click(within(clearDialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(slot.queryByRole("dialog")).toBeNull());
+
+    fireEvent.click(trigger);
+    fireEvent.click(slot.getByRole("menuitem", { name: "Clear threads" }));
+    const reopenedClearDialog = await slot.findByRole("dialog");
+    fireEvent.click(within(reopenedClearDialog).getByRole("button", { name: "Clear threads" }));
+    await waitFor(() =>
+      expect(clearThreads).toHaveBeenCalledWith({ projectId: "project-1" }),
+    );
+
+    fireEvent.click(trigger);
     fireEvent.click(slot.getByRole("menuitem", { name: "Delete project" }));
+    const deleteDialog = await slot.findByRole("dialog");
+    expect(within(deleteDialog).getByRole("heading", { name: "Delete project?" })).toBeTruthy();
+    expect(within(deleteDialog).getByText("This action cannot be undone.")).toBeTruthy();
+    fireEvent.click(within(deleteDialog).getByRole("button", { name: "Delete project" }));
     await waitFor(() =>
       expect(deleteProject).toHaveBeenCalledWith({ projectId: "project-1" }),
     );

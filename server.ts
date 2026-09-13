@@ -19,6 +19,37 @@ interface CollectionProjectRow {
   position: number;
 }
 
+type ThreadRow = Awaited<ReturnType<BbPluginApi["sdk"]["threads"]["list"]>>[number];
+
+const THREAD_PAGE_SIZE = 500;
+
+function hasActiveThreadWork(thread: ThreadRow): boolean {
+  const activity = thread.activity;
+  return (
+    thread.status !== "idle" ||
+    thread.runtime.displayStatus !== "idle" ||
+    thread.hasPendingInteraction ||
+    thread.queuedWork !== "none" ||
+    activity.activeBackgroundAgentCount > 0 ||
+    activity.activeBackgroundCommandCount > 0 ||
+    activity.activeGoalCount > 0 ||
+    activity.activePlanModeCount > 0 ||
+    activity.activeWorkflowCount > 0
+  );
+}
+
+function threadDepth(thread: ThreadRow, byId: ReadonlyMap<string, ThreadRow>): number {
+  let depth = 0;
+  let parentId = thread.parentThreadId;
+  const seen = new Set([thread.id]);
+  while (parentId !== null && !seen.has(parentId)) {
+    seen.add(parentId);
+    depth += 1;
+    parentId = byId.get(parentId)?.parentThreadId ?? null;
+  }
+  return depth;
+}
+
 function normalizeName(name: string): string {
   return name.trim().replace(/\s+/g, " ");
 }
@@ -100,12 +131,17 @@ export default async function plugin(bb: BbPluginApi) {
     }
   };
 
-  const assertAssignableProject = async (projectId: string): Promise<void> => {
+  const projectById = async (projectId: string) => {
     const projects = await bb.sdk.projects.list({ includePersonal: true });
     const project = projects.find((candidate) => candidate.id === projectId);
     if (project === undefined) {
       throw new Error("Project not found");
     }
+    return project;
+  };
+
+  const assertAssignableProject = async (projectId: string): Promise<void> => {
+    const project = await projectById(projectId);
     if (project.kind === "personal") {
       throw new Error("The Threads project cannot be placed in a collection");
     }
@@ -242,6 +278,102 @@ export default async function plugin(bb: BbPluginApi) {
     publishChanged();
   };
 
+  const clearProjectThreads = async (
+    projectId: string,
+  ): Promise<{ deletedCount: number; preservedCount: number }> => {
+    await projectById(projectId);
+
+    const rows: ThreadRow[] = [];
+    for (const archived of [false, true]) {
+      for (let offset = 0; ; offset += THREAD_PAGE_SIZE) {
+        const page = await bb.sdk.threads.list({
+          archived,
+          includeHidden: false,
+          limit: THREAD_PAGE_SIZE,
+          offset,
+          projectId,
+        });
+        rows.push(...page);
+        if (page.length < THREAD_PAGE_SIZE) break;
+      }
+    }
+
+    const uniqueRows = [...new Map(rows.map((thread) => [thread.id, thread])).values()];
+    const byId = new Map(uniqueRows.map((thread) => [thread.id, thread]));
+    const candidates = uniqueRows
+      .filter((thread) => !hasActiveThreadWork(thread))
+      .sort(
+        (left, right) =>
+          threadDepth(right, byId) - threadDepth(left, byId) ||
+          left.id.localeCompare(right.id),
+    );
+
+    let deletedCount = 0;
+    let preservedCount = uniqueRows.length - candidates.length;
+    for (const candidate of candidates) {
+      let current: Awaited<ReturnType<BbPluginApi["sdk"]["threads"]["get"]>>;
+      try {
+        current = await bb.sdk.threads.get({ threadId: candidate.id });
+      } catch (cause) {
+        preservedCount += 1;
+        bb.log.debug(`clear threads lookup skipped for ${candidate.id}: ${String(cause)}`);
+        continue;
+      }
+      if (
+        current.deletedAt !== null ||
+        current.projectId !== projectId ||
+        current.visibility !== "visible" ||
+        current.status !== "idle" ||
+        current.runtime.displayStatus !== "idle" ||
+        current.activeBackgroundAgentCount > 0 ||
+        current.queuedMessageCount > 0
+      ) {
+        preservedCount += 1;
+        continue;
+      }
+      let pendingInteractions: Awaited<
+        ReturnType<typeof bb.sdk.threads.interactions.list>
+      >;
+      try {
+        pendingInteractions = await bb.sdk.threads.interactions.list({
+          threadId: candidate.id,
+        });
+      } catch (cause) {
+        preservedCount += 1;
+        bb.log.debug(`clear threads attention lookup skipped for ${candidate.id}: ${String(cause)}`);
+        continue;
+      }
+      if (pendingInteractions.length > 0) {
+        preservedCount += 1;
+        continue;
+      }
+      try {
+        await bb.sdk.threads.delete({
+          threadId: candidate.id,
+          childThreadsConfirmed: false,
+        });
+        deletedCount += 1;
+      } catch (cause) {
+        preservedCount += 1;
+        bb.log.debug(`clear threads deletion skipped for ${candidate.id}: ${String(cause)}`);
+      }
+    }
+
+    return { deletedCount, preservedCount };
+  };
+
+  const clearPersonalThreads = async (): Promise<{
+    deletedCount: number;
+    preservedCount: number;
+  }> => {
+    const projects = await bb.sdk.projects.list({ includePersonal: true });
+    const personalProject = projects.find((project) => project.kind === "personal");
+    if (personalProject === undefined) {
+      throw new Error("The Threads project was not found");
+    }
+    return clearProjectThreads(personalProject.id);
+  };
+
   bb.rpc.register(rpcContract, {
     collections_list: () => ({ collections: readCollections() }),
     collections_create: ({ name }) => createCollection(name),
@@ -267,6 +399,8 @@ export default async function plugin(bb: BbPluginApi) {
       publishChanged();
       return { deleted: true as const };
     },
+    projects_clear_threads: ({ projectId }) => clearProjectThreads(projectId),
+    chats_clear: () => clearPersonalThreads(),
     projects_reorder: async ({ collectionId, projectIds }) => {
       await reorderProjects(collectionId, projectIds);
       return { ok: true as const };

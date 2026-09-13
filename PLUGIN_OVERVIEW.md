@@ -9,10 +9,12 @@ have not been filed remain in the same flat list shape as BB's native sidebar.
 Create, rename, reorder, collapse, and delete Collections without changing BB
 projects themselves. The Collections header includes a collapse/expand-all
 button beside New collection, while each Collection can still be toggled
-individually. Drag a project onto a Collection or use its action menu to move
-it. Deleting a Collection simply returns its projects to the ungrouped list.
-The personal Threads project is protected and remains outside every
-Collection.
+individually. Drag a project onto a Collection to move it. Project action menus
+keep Rename project and Delete project, plus Clear threads for removing
+inactive threads while preserving running, attention, and error threads.
+The personal Chats header also provides Clear chats with the same protection.
+Deleting a Collection simply returns its projects to the ungrouped list. The
+personal Threads project is protected and remains outside every Collection.
 
 Thread rows continue to use BB's own navigation and actions: unread state,
 pinning, rename, archive, delete confirmation, keyboard shortcuts, and split

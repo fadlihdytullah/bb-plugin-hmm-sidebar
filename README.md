@@ -21,11 +21,11 @@ For local development, install it from this directory:
 bb plugin install .
 ```
 
-The installed runtime plugin ID is `bb-plugin-hmm-sidebar`. Reload it after a
+The installed runtime plugin ID is `hmm-sidebar`. Reload it after a
 local build with:
 
 ```sh
-bb plugin reload bb-plugin-hmm-sidebar
+bb plugin reload hmm-sidebar
 ```
 
 Then select **Hmm Sidebar** under **Settings → Appearance → Sidebar**.
@@ -49,11 +49,13 @@ attention, Pinned, and Recents with the arrow keys, press **Enter** to open a
 thread, or **Cmd+Enter** to open it in a split. The palette is centered within
 BB's main chat container.
 
-Collections are plugin-owned state. Create one with the folder-plus button,
-drag projects into it, or use a project's action menu. The Collections header
-also includes a collapse/expand-all button beside New collection. Collection
-names and membership are shared across clients; collapsed state is kept per
-client.
+Collections are plugin-owned state. Create one with the folder-plus button or
+drag projects into it. The Collections header also includes a
+collapse/expand-all button beside New collection. Collection names and
+membership are shared across clients; collapsed state is kept per client.
+Project action menus keep Rename project and Delete project, and Clear threads
+removes inactive threads while preserving running, attention, and error threads.
+The personal Chats header also provides Clear chats with the same protection.
 Deleting a Collection returns its projects to the flat list and does not delete
 the projects or threads. The personal **Threads** project is always kept out of
 Collections.

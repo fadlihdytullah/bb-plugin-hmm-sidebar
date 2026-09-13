@@ -4,6 +4,7 @@ import {
   experimental_useSidebarThreadActions,
   experimental_useSidebarThreads,
   useBbContext,
+  useRpc,
   type PluginThreadListProps,
   type ExperimentalSidebarFooterDisclosureProps,
 } from "@get-bb/plugin-sdk/app";
@@ -25,7 +26,16 @@ import { Icon } from "@/components/ui/icon";
 import { useCollapsedCollections } from "@/hooks/use-collapsed-collections";
 import { useCollections } from "@/hooks/use-collections";
 import { buildSidebarModel, threadTitle } from "@/lib/sidebar-model";
-import type { Collection } from "@/contract";
+import { rpcContract, type Collection } from "@/contract";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 function projectIdFromDrag(event: DragEvent): string | null {
   const typed = event.dataTransfer.getData(PROJECT_DRAG_TYPE).trim();
@@ -126,6 +136,10 @@ function CollectionsSidebar({
   const [chatSort, setChatSort] = useState<ChatSort>("recent");
   const [chatFilter, setChatFilter] = useState<ChatFilter>("all");
   const threadActions = experimental_useSidebarThreadActions();
+  const rpc = useRpc<typeof rpcContract>();
+  const [clearChatsOpen, setClearChatsOpen] = useState(false);
+  const [clearChatsBusy, setClearChatsBusy] = useState(false);
+  const [clearChatsError, setClearChatsError] = useState<string | null>(null);
 
   const model = useMemo(
     () => buildSidebarModel(collectionsState.collections, projects, threads),
@@ -249,6 +263,27 @@ function CollectionsSidebar({
     ],
     [projectFilter, projectSort],
   );
+
+  const clearChats = async () => {
+    if (clearChatsBusy) return;
+    setClearChatsBusy(true);
+    setClearChatsError(null);
+    try {
+      const { deletedCount } = await rpc.call("chats_clear", {});
+      toast.success(
+        deletedCount === 0
+          ? "No inactive chats to clear"
+          : `Cleared ${deletedCount} inactive chat${deletedCount === 1 ? "" : "s"}`,
+      );
+      setClearChatsOpen(false);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : String(cause);
+      setClearChatsError(message);
+      toast.error("Could not clear chats", { description: message });
+    } finally {
+      setClearChatsBusy(false);
+    }
+  };
 
   const openCreate = useCallback(() => {
     setEditingCollection(null);
@@ -418,7 +453,6 @@ function CollectionsSidebar({
                 key={collection.id}
                 collection={collection}
                 projects={collectionProjects}
-                allCollections={collectionsState.collections}
                 collectionIndex={index}
                 expanded={!isCollapsed(collection.id)}
                 onToggle={() => toggle(collection.id)}
@@ -508,7 +542,6 @@ function CollectionsSidebar({
                     activeThreadId={activeThreadId}
                     onNavigate={onNavigate}
                     currentCollectionId={null}
-                    collections={collectionsState.collections}
                     projectIndex={index}
                     onMoveProject={moveProject}
                     onError={reportError}
@@ -563,6 +596,19 @@ function CollectionsSidebar({
                   >
                     <Icon name="MessageSquarePlus" className="size-4" aria-hidden="true" />
                   </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 text-muted-foreground hover:text-destructive"
+                    aria-label="Clear chats"
+                    onClick={() => {
+                      setClearChatsError(null);
+                      setClearChatsOpen(true);
+                    }}
+                  >
+                    <Icon name="Trash2" className="size-4" aria-hidden="true" />
+                  </Button>
                   <ActionMenu
                     label="Sort and filter chats"
                     items={chatViewItems}
@@ -616,7 +662,45 @@ function CollectionsSidebar({
         onOpenChange={setDialogOpen}
         onSubmit={submitCollection}
       />
-      </div>
+      <Dialog
+        open={clearChatsOpen}
+        onOpenChange={(open) => {
+          if (!open && !clearChatsBusy) {
+            setClearChatsOpen(false);
+            setClearChatsError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear chats?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. Running chats, chats needing attention, and chats with errors will be kept.
+            </DialogDescription>
+          </DialogHeader>
+          {clearChatsError !== null ? (
+            <p role="alert" className="text-sm text-destructive">
+              {clearChatsError}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={clearChatsBusy}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={clearChatsBusy}
+              onClick={() => void clearChats()}
+            >
+              {clearChatsBusy ? "Clearing…" : "Clear chats"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
 
       {includeActivity && status === "ready" ? (
         <ActivityPanel

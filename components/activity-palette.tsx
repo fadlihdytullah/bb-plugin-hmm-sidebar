@@ -294,6 +294,7 @@ export function ActivityPalette() {
     );
 
   if (chatContainer === null) return palette;
+  if (!open) return null;
 
   return createPortal(
     <div {...portalScopeProps} style={{ display: "contents" }}>

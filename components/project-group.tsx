@@ -5,15 +5,27 @@ import {
   type PluginSidebarProject,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
+import { toast } from "sonner";
 import { ActionMenu } from "@/components/action-menu";
 import { NameDialog } from "@/components/name-dialog";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import type { Collection } from "@/contract";
 import { ThreadRow } from "@/components/thread-row";
 import { rpcContract } from "@/contract";
 
 export const PROJECT_DRAG_TYPE = "application/x-bb-collections-project";
 export const COLLECTION_DRAG_TYPE = "application/x-bb-collections-collection";
+
+type ProjectConfirmation = "clear-threads" | "delete-project";
 
 /**
  * `DataTransfer` keeps drag payload values protected until `drop`, but its
@@ -37,7 +49,6 @@ export function ProjectGroup({
   onNavigate,
   initiallyExpanded = true,
   currentCollectionId,
-  collections,
   projectIndex,
   onMoveProject,
   onError,
@@ -49,7 +60,6 @@ export function ProjectGroup({
   onNavigate: () => void;
   initiallyExpanded?: boolean;
   currentCollectionId: string | null;
-  collections: readonly Collection[];
   projectIndex: number;
   onMoveProject: (
     projectId: string,
@@ -63,6 +73,9 @@ export function ProjectGroup({
   const rpc = useRpc<typeof rpcContract>();
   const [expanded, setExpanded] = useState(initiallyExpanded);
   const [renameOpen, setRenameOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState<ProjectConfirmation | null>(null);
+  const [confirmationBusy, setConfirmationBusy] = useState(false);
+  const [confirmationError, setConfirmationError] = useState<string | null>(null);
   useEffect(() => {
     if (expandedOverride !== undefined) setExpanded(expandedOverride);
   }, [expandedOverride]);
@@ -70,28 +83,37 @@ export function ProjectGroup({
     () => threads.filter((thread) => !thread.isArchived),
     [threads],
   );
-  const moveItems = useMemo(() => {
-    const items = collections
-      .filter((collection) => collection.id !== currentCollectionId)
-      .map((collection) => ({
-        id: `move-${collection.id}`,
-        label: `Move to ${collection.name}`,
-        onSelect: () => {
-          void onMoveProject(project.id, collection.id, collection.projectIds.length).catch(onError);
-        },
-      }));
-    if (currentCollectionId !== null) {
-      items.push({
-        id: "remove-from-collection",
-        label: "Remove from collection",
-        onSelect: () => {
-          void onMoveProject(project.id, null, 0).catch(onError);
-        },
-      });
-    }
-    return items;
-  }, [collections, currentCollectionId, onError, onMoveProject, project.id]);
+  const confirmProjectAction = async () => {
+    if (confirmation === null || confirmationBusy) return;
 
+    const action = confirmation;
+    setConfirmationBusy(true);
+    setConfirmationError(null);
+    try {
+      if (action === "clear-threads") {
+        const { deletedCount } = await rpc.call("projects_clear_threads", {
+          projectId: project.id,
+        });
+        toast.success(
+          deletedCount === 0
+            ? "No inactive threads to clear"
+            : `Cleared ${deletedCount} inactive thread${deletedCount === 1 ? "" : "s"}`,
+        );
+      } else {
+        await rpc.call("projects_delete", { projectId: project.id });
+      }
+      setConfirmation(null);
+    } catch (cause) {
+      const description = cause instanceof Error ? cause.message : String(cause);
+      setConfirmationError(description);
+      toast.error(
+        action === "clear-threads" ? "Could not clear threads" : "Could not delete project",
+        { description },
+      );
+    } finally {
+      setConfirmationBusy(false);
+    }
+  };
   const projectItems = useMemo(
     () => [
       {
@@ -99,19 +121,29 @@ export function ProjectGroup({
         label: "Rename project",
         onSelect: () => setRenameOpen(true),
       },
-      ...moveItems,
+      {
+        id: "clear-threads",
+        label: "Clear threads",
+        destructive: true,
+        onSelect: () => {
+          setConfirmationError(null);
+          setConfirmation("clear-threads");
+        },
+      },
       {
         id: "delete-project",
         label: "Delete project",
         destructive: true,
         onSelect: () => {
-          if (!window.confirm(`Delete ${project.name}? This cannot be undone.`)) return;
-          void rpc.call("projects_delete", { projectId: project.id }).catch(onError);
+          setConfirmationError(null);
+          setConfirmation("delete-project");
         },
       },
     ],
-    [moveItems, onError, project.id, project.name, rpc],
+    [project.id],
   );
+
+  const isClearConfirmation = confirmation === "clear-threads";
 
   return (
     <li
@@ -223,6 +255,52 @@ export function ProjectGroup({
           }
         }}
       />
+      <Dialog
+        open={confirmation !== null}
+        onOpenChange={(open) => {
+          if (!open && !confirmationBusy) {
+            setConfirmation(null);
+            setConfirmationError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isClearConfirmation ? "Clear threads?" : "Delete project?"}</DialogTitle>
+            <DialogDescription>
+              {isClearConfirmation
+                ? "This action cannot be undone. Running threads, threads needing attention, and threads with errors will be kept."
+                : "This action cannot be undone."}
+            </DialogDescription>
+          </DialogHeader>
+          {confirmationError !== null ? (
+            <p role="alert" className="text-sm text-destructive">
+              {confirmationError}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={confirmationBusy}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={confirmationBusy}
+              onClick={() => void confirmProjectAction()}
+            >
+              {confirmationBusy
+                ? isClearConfirmation
+                  ? "Clearing…"
+                  : "Deleting…"
+                : isClearConfirmation
+                  ? "Clear threads"
+                  : "Delete project"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </li>
   );
 }

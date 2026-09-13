@@ -64,7 +64,7 @@ export function ThreadRow({
         href="#"
         aria-current={isActive ? "page" : undefined}
         aria-label={`${title}${thread.indicatorLabel ? `, ${thread.indicatorLabel}` : ""}`}
-        className={`flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 pr-9 text-xs transition-colors motion-reduce:transition-none ${
+        className={`flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 pr-16 text-xs transition-colors motion-reduce:transition-none ${
           isActive
             ? "bg-sidebar-accent text-sidebar-accent-foreground"
             : "text-sidebar-foreground hover:bg-sidebar-accent/70"
@@ -87,8 +87,20 @@ export function ThreadRow({
         ) : null}
       </a>
       <div className="pointer-events-auto absolute bottom-0 right-1 top-0 flex items-center">
+        <button
+          type="button"
+          aria-label={`Delete ${title}`}
+          className="pointer-events-none flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/thread:pointer-events-auto group-hover/thread:opacity-100 group-focus-within/thread:pointer-events-auto group-focus-within/thread:opacity-100 motion-reduce:transition-none"
+          onClick={(event) => {
+            event.preventDefault();
+            actions.requestDelete(thread.id);
+          }}
+        >
+          <Icon name="Trash2" className="size-3.5" aria-hidden="true" />
+        </button>
         <ActionMenu
           label={`Actions for ${title}`}
+          triggerClassName="group-hover/thread:opacity-100 group-focus-within/thread:opacity-100"
           items={[
             {
               id: "pin",
