@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   experimental_useSidebarThreadActions,
   type PluginSidebarProject,
@@ -141,6 +141,16 @@ function ActivityRow({
   );
 }
 
+const EXPANDED_STORAGE_KEY = "bb-plugin-hmm-sidebar:activity-expanded:v1";
+
+function readExpanded(): boolean {
+  try {
+    return window.localStorage.getItem(EXPANDED_STORAGE_KEY) !== "false";
+  } catch {
+    return true;
+  }
+}
+
 export function ActivityPanel({
   threads,
   projects,
@@ -154,6 +164,17 @@ export function ActivityPanel({
 }) {
   const actions = experimental_useSidebarThreadActions();
   const recentIds = useRecents();
+  const [expanded, setExpanded] = useState(readExpanded);
+
+  const toggleExpanded = (): void => {
+    const next = !expanded;
+    setExpanded(next);
+    try {
+      window.localStorage.setItem(EXPANDED_STORAGE_KEY, String(next));
+    } catch {
+      // Local storage can be unavailable in a restricted iframe.
+    }
+  };
 
   const parkedIds = useMemo(() => {
     const recent = new Set(recentIds);
@@ -226,16 +247,37 @@ export function ActivityPanel({
   return (
     <section
       aria-label="Sidebar activity"
-      className="sticky bottom-0 z-10 shrink-0 border-t border-border/70 bg-sidebar px-2 pb-2 pt-3"
+      className={`sticky bottom-0 z-10 shrink-0 border-t border-border/70 bg-sidebar px-2 pt-3 ${
+        expanded ? "pb-2" : "border-b pb-3"
+      }`}
     >
-      <div className="mb-1 flex items-center justify-between px-2">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          Activity
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-label={`${expanded ? "Hide" : "Show"} Activity`}
+        onClick={toggleExpanded}
+        className={`flex w-full items-center justify-between rounded px-2 text-muted-foreground hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+          expanded ? "mb-1" : ""
+        }`}
+      >
+        <span className="flex items-center gap-1">
+          <Icon
+            name="ChevronDown"
+            className={`size-3.5 transition-transform motion-reduce:transition-none ${
+              expanded ? "" : "-rotate-90"
+            }`}
+            aria-hidden="true"
+          />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">
+            Activity
+          </span>
         </span>
-        <span className="text-[10px] tabular-nums text-muted-foreground">
+        <span className="text-[10px] tabular-nums">
           {activityThreads.length}
         </span>
-      </div>
+      </button>
+      {expanded ? (
+      <>
       <div className="max-h-52 overflow-y-auto rounded-lg border border-border/70 bg-sidebar-accent/20 p-1">
         {activityThreads.length > 0 ? (
           <ul className="space-y-0.5">
@@ -282,6 +324,8 @@ export function ActivityPanel({
             ))}
           </ul>
         </div>
+      ) : null}
+      </>
       ) : null}
     </section>
   );

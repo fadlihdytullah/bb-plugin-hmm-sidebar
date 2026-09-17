@@ -41,7 +41,8 @@ New thread and Search threads remain checked at all times.
 
 Active chats continue to appear automatically while agents are working or
 need attention. Pin a chat anywhere in BB—or directly from Activity or
-Recents—to keep it in Activity while it is idle.
+Recents—to keep it in Activity while it is idle. Click the **Activity** header
+to hide or show the section; the choice is remembered per BB client.
 
 Press **Cmd+E** to open the floating Activity palette from anywhere in BB.
 Search by thread title or project, move through Currently active, Needs

@@ -24,6 +24,7 @@ database and updates are broadcast to other open clients.
 The sidebar also keeps the Active Chats activity panel visible. Working chats
 appear automatically, while pinned chats remain visible after becoming idle.
 BB's native pin state is respected and can be toggled from Activity or Recents.
+The Activity section can be collapsed from its header, and the choice persists.
 The same Activity view is available as a floating palette with **Cmd+E**;
 search matches thread titles and project names, arrow keys move through the
 results, **Enter** opens the selected thread, and **Cmd+Enter** opens a split.

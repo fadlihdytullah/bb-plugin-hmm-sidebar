@@ -675,6 +675,32 @@ describe("Hmm Sidebar app", () => {
     });
   });
 
+  it("toggles the Activity section and remembers the choice", async () => {
+    const options = {
+      sidebarThreads: {
+        status: "ready" as const,
+        threads: [runningThread("Build API", "project-1")],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+      },
+      rpc: {
+        collections_list: () => ({ collections: [] }),
+      },
+    };
+    const slot = renderSlot(threadList, listProps, options);
+
+    const activity = await slot.findByRole("region", { name: "Sidebar activity" });
+    fireEvent.click(within(activity).getByRole("button", { name: "Hide Activity" }));
+    expect(within(activity).queryByText("Build API")).toBeNull();
+    expect(within(activity).getByText("1")).toBeTruthy();
+
+    cleanup();
+    const again = renderSlot(threadList, listProps, options);
+    const reopened = await again.findByRole("region", { name: "Sidebar activity" });
+    expect(within(reopened).queryByText("Build API")).toBeNull();
+    fireEvent.click(within(reopened).getByRole("button", { name: "Show Activity" }));
+    expect(within(reopened).getByText("Build API")).toBeTruthy();
+  });
+
   it("lets a working chat be pinned without changing its active behavior", async () => {
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {

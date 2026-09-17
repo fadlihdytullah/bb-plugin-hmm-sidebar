@@ -204,7 +204,6 @@ export function ProjectGroup({
             aria-hidden="true"
           />
         </button>
-        <Icon name="Folder" className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span
           className="min-w-0 flex-1 truncate"
           title={project.name}
