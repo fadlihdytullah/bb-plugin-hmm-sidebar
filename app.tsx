@@ -19,6 +19,7 @@ import {
   PROJECT_DRAG_TYPE,
   ProjectGroup,
 } from "@/components/project-group";
+import { BulkThreadPicker } from "@/components/bulk-thread-picker";
 import { ThreadRow } from "@/components/thread-row";
 import { CompactSidebarNavigation } from "@/components/sidebar-navigation";
 import { Button } from "@/components/ui/button";
@@ -140,6 +141,8 @@ function CollectionsSidebar({
   const [clearChatsOpen, setClearChatsOpen] = useState(false);
   const [clearChatsBusy, setClearChatsBusy] = useState(false);
   const [clearChatsError, setClearChatsError] = useState<string | null>(null);
+  const [bulkDelete, setBulkDelete] = useState(false);
+  const [selectedChatIds, setSelectedChatIds] = useState<ReadonlySet<string>>(new Set());
 
   const model = useMemo(
     () => buildSidebarModel(collectionsState.collections, projects, threads),
@@ -185,6 +188,12 @@ function CollectionsSidebar({
         : left.updatedAt - right.updatedAt;
     });
   }, [chatFilter, chatSort, model.personalProject]);
+
+  const bulkChats = useMemo(
+    () => (model.personalProject?.threads ?? []).filter((thread) => !thread.isArchived),
+    [model.personalProject],
+  );
+  const selectedBulkChats = bulkChats.filter((thread) => selectedChatIds.has(thread.id));
 
   const chatViewItems = useMemo<readonly ActionMenuItem[]>(
     () => [
@@ -269,7 +278,10 @@ function CollectionsSidebar({
     setClearChatsBusy(true);
     setClearChatsError(null);
     try {
-      const { deletedCount } = await rpc.call("chats_clear", {});
+      const { deletedCount } = await rpc.call(
+        "chats_clear",
+        bulkDelete ? { threadIds: selectedBulkChats.map((thread) => thread.id) } : {},
+      );
       toast.success(
         deletedCount === 0
           ? "No inactive chats to clear"
@@ -604,6 +616,8 @@ function CollectionsSidebar({
                     aria-label="Clear chats"
                     onClick={() => {
                       setClearChatsError(null);
+                      setBulkDelete(false);
+                      setSelectedChatIds(new Set());
                       setClearChatsOpen(true);
                     }}
                   >
@@ -678,6 +692,16 @@ function CollectionsSidebar({
               This action cannot be undone. Running chats, chats needing attention, and chats with errors will be kept.
             </DialogDescription>
           </DialogHeader>
+          <BulkThreadPicker
+            enabled={bulkDelete}
+            onEnabledChange={setBulkDelete}
+            threads={bulkChats}
+            selectedIds={selectedChatIds}
+            onSelectedIdsChange={setSelectedChatIds}
+            disabled={clearChatsBusy}
+            listLabel="Chats to delete"
+            emptyLabel="No chats to delete"
+          />
           {clearChatsError !== null ? (
             <p role="alert" className="text-sm text-destructive">
               {clearChatsError}
@@ -692,10 +716,14 @@ function CollectionsSidebar({
             <Button
               type="button"
               variant="destructive"
-              disabled={clearChatsBusy}
+              disabled={clearChatsBusy || (bulkDelete && selectedBulkChats.length === 0)}
               onClick={() => void clearChats()}
             >
-              {clearChatsBusy ? "Clearing…" : "Clear chats"}
+              {clearChatsBusy
+                ? "Clearing…"
+                : bulkDelete
+                  ? `Delete ${selectedBulkChats.length} selected`
+                  : "Clear chats"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -7,6 +7,7 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
 import { ActionMenu } from "@/components/action-menu";
+import { BulkThreadPicker } from "@/components/bulk-thread-picker";
 import { NameDialog } from "@/components/name-dialog";
 import {
   Dialog,
@@ -76,6 +77,8 @@ export function ProjectGroup({
   const [confirmation, setConfirmation] = useState<ProjectConfirmation | null>(null);
   const [confirmationBusy, setConfirmationBusy] = useState(false);
   const [confirmationError, setConfirmationError] = useState<string | null>(null);
+  const [bulkDelete, setBulkDelete] = useState(false);
+  const [selectedThreadIds, setSelectedThreadIds] = useState<ReadonlySet<string>>(new Set());
   useEffect(() => {
     if (expandedOverride !== undefined) setExpanded(expandedOverride);
   }, [expandedOverride]);
@@ -83,6 +86,9 @@ export function ProjectGroup({
     () => threads.filter((thread) => !thread.isArchived),
     [threads],
   );
+  const selectedThreadCount = visibleThreads.filter((thread) =>
+    selectedThreadIds.has(thread.id),
+  ).length;
   const confirmProjectAction = async () => {
     if (confirmation === null || confirmationBusy) return;
 
@@ -91,9 +97,17 @@ export function ProjectGroup({
     setConfirmationError(null);
     try {
       if (action === "clear-threads") {
-        const { deletedCount } = await rpc.call("projects_clear_threads", {
-          projectId: project.id,
-        });
+        const { deletedCount } = await rpc.call(
+          "projects_clear_threads",
+          bulkDelete
+            ? {
+                projectId: project.id,
+                threadIds: visibleThreads
+                  .filter((thread) => selectedThreadIds.has(thread.id))
+                  .map((thread) => thread.id),
+              }
+            : { projectId: project.id },
+        );
         toast.success(
           deletedCount === 0
             ? "No inactive threads to clear"
@@ -127,6 +141,8 @@ export function ProjectGroup({
         destructive: true,
         onSelect: () => {
           setConfirmationError(null);
+          setBulkDelete(false);
+          setSelectedThreadIds(new Set());
           setConfirmation("clear-threads");
         },
       },
@@ -272,6 +288,18 @@ export function ProjectGroup({
                 : "This action cannot be undone."}
             </DialogDescription>
           </DialogHeader>
+          {isClearConfirmation ? (
+            <BulkThreadPicker
+              enabled={bulkDelete}
+              onEnabledChange={setBulkDelete}
+              threads={visibleThreads}
+              selectedIds={selectedThreadIds}
+              onSelectedIdsChange={setSelectedThreadIds}
+              disabled={confirmationBusy}
+              listLabel="Threads to delete"
+              emptyLabel="No threads to delete"
+            />
+          ) : null}
           {confirmationError !== null ? (
             <p role="alert" className="text-sm text-destructive">
               {confirmationError}
@@ -286,7 +314,10 @@ export function ProjectGroup({
             <Button
               type="button"
               variant="destructive"
-              disabled={confirmationBusy}
+              disabled={
+                confirmationBusy ||
+                (isClearConfirmation && bulkDelete && selectedThreadCount === 0)
+              }
               onClick={() => void confirmProjectAction()}
             >
               {confirmationBusy
@@ -294,7 +325,9 @@ export function ProjectGroup({
                   ? "Clearing…"
                   : "Deleting…"
                 : isClearConfirmation
-                  ? "Clear threads"
+                  ? bulkDelete
+                    ? `Delete ${selectedThreadCount} selected`
+                    : "Clear threads"
                   : "Delete project"}
             </Button>
           </DialogFooter>

@@ -280,6 +280,7 @@ export default async function plugin(bb: BbPluginApi) {
 
   const clearProjectThreads = async (
     projectId: string,
+    onlyThreadIds?: readonly string[],
   ): Promise<{ deletedCount: number; preservedCount: number }> => {
     await projectById(projectId);
 
@@ -298,7 +299,10 @@ export default async function plugin(bb: BbPluginApi) {
       }
     }
 
-    const uniqueRows = [...new Map(rows.map((thread) => [thread.id, thread])).values()];
+    const allowedIds = onlyThreadIds === undefined ? null : new Set(onlyThreadIds);
+    const uniqueRows = [...new Map(rows.map((thread) => [thread.id, thread])).values()].filter(
+      (thread) => allowedIds === null || allowedIds.has(thread.id),
+    );
     const byId = new Map(uniqueRows.map((thread) => [thread.id, thread]));
     const candidates = uniqueRows
       .filter((thread) => !hasActiveThreadWork(thread))
@@ -362,7 +366,7 @@ export default async function plugin(bb: BbPluginApi) {
     return { deletedCount, preservedCount };
   };
 
-  const clearPersonalThreads = async (): Promise<{
+  const clearPersonalThreads = async (threadIds?: readonly string[]): Promise<{
     deletedCount: number;
     preservedCount: number;
   }> => {
@@ -371,7 +375,7 @@ export default async function plugin(bb: BbPluginApi) {
     if (personalProject === undefined) {
       throw new Error("The Threads project was not found");
     }
-    return clearProjectThreads(personalProject.id);
+    return clearProjectThreads(personalProject.id, threadIds);
   };
 
   bb.rpc.register(rpcContract, {
@@ -399,8 +403,9 @@ export default async function plugin(bb: BbPluginApi) {
       publishChanged();
       return { deleted: true as const };
     },
-    projects_clear_threads: ({ projectId }) => clearProjectThreads(projectId),
-    chats_clear: () => clearPersonalThreads(),
+    projects_clear_threads: ({ projectId, threadIds }) =>
+      clearProjectThreads(projectId, threadIds),
+    chats_clear: ({ threadIds }) => clearPersonalThreads(threadIds),
     projects_reorder: async ({ collectionId, projectIds }) => {
       await reorderProjects(collectionId, projectIds);
       return { ok: true as const };

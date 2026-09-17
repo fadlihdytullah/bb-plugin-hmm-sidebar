@@ -12,7 +12,8 @@ button beside New collection, while each Collection can still be toggled
 individually. Drag a project onto a Collection to move it. Project action menus
 keep Rename project and Delete project, plus Clear threads for removing
 inactive threads while preserving running, attention, and error threads.
-The personal Chats header also provides Clear chats with the same protection.
+The personal Chats header also provides Clear chats with the same protection. Both clear
+dialogs offer Bulk deletions to pick specific threads or chats to delete.
 Deleting a Collection simply returns its projects to the ungrouped list. The
 personal Threads project is protected and remains outside every Collection.
 

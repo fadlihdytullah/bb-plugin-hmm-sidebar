@@ -328,6 +328,36 @@ describe("Hmm Sidebar app", () => {
     await waitFor(() => expect(clearChats).toHaveBeenCalledWith({}));
   });
 
+  it("bulk deletes only the selected personal chats", async () => {
+    const clearChats = vi.fn(() => ({ deletedCount: 1, preservedCount: 0 }));
+    const slot = renderSlot(threadList, listProps, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [thread("Note A", "threads"), thread("Note B", "threads")],
+        projects: [{ id: "threads", name: "Threads", isPersonal: true }],
+      },
+      rpc: {
+        collections_list: () => ({ collections: [] }),
+        chats_clear: clearChats,
+      },
+    });
+
+    await slot.findByText("Note A");
+    fireEvent.click(slot.getByRole("button", { name: "Clear chats" }));
+    const dialog = await slot.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "Bulk deletions" }));
+    const list = within(dialog).getByRole("list", { name: "Chats to delete" });
+    const submit = within(dialog).getByRole("button", { name: "Delete 0 selected" });
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: /Select all/ }));
+    fireEvent.click(within(list).getByRole("checkbox", { name: "Note A" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete 1 selected" }));
+    await waitFor(() =>
+      expect(clearChats).toHaveBeenCalledWith({ threadIds: ["Note B"] }),
+    );
+  });
+
   it("groups only loose non-personal projects under the Projects header", async () => {
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
@@ -509,6 +539,38 @@ describe("Hmm Sidebar app", () => {
       "Delete project",
     ]);
     expect(slot.queryByRole("menuitem", { name: /Move to|Remove from collection/ })).toBeNull();
+  });
+
+  it("bulk deletes only the selected project threads", async () => {
+    const clearThreads = vi.fn(() => ({ deletedCount: 1, preservedCount: 0 }));
+    const slot = renderSlot(threadList, listProps, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [thread("Task A", "project-1"), thread("Task B", "project-1")],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+      },
+      rpc: {
+        collections_list: () => ({ collections: [] }),
+        projects_clear_threads: clearThreads,
+      },
+    });
+
+    fireEvent.click(await slot.findByRole("button", { name: "Actions for Engineering" }));
+    fireEvent.click(slot.getByRole("menuitem", { name: "Clear threads" }));
+    const dialog = await slot.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "Bulk deletions" }));
+    const list = within(dialog).getByRole("list", { name: "Threads to delete" });
+    const submit = within(dialog).getByRole("button", { name: "Delete 0 selected" });
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(within(list).getByRole("checkbox", { name: "Task B" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete 1 selected" }));
+    await waitFor(() =>
+      expect(clearThreads).toHaveBeenCalledWith({
+        projectId: "project-1",
+        threadIds: ["Task B"],
+      }),
+    );
   });
 
   it("renames, clears, and deletes a project from its action menu", async () => {

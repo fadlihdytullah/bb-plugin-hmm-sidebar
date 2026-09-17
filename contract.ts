@@ -65,7 +65,7 @@ export const rpcContract = defineRpcContract({
     output: z.object({ deleted: z.literal(true) }).strict(),
   },
   projects_clear_threads: {
-    input: z.object({ projectId }).strict(),
+    input: z.object({ projectId, threadIds: orderedIds.optional() }).strict(),
     output: z
       .object({
         deletedCount: z.number().int().nonnegative(),
@@ -74,7 +74,7 @@ export const rpcContract = defineRpcContract({
       .strict(),
   },
   chats_clear: {
-    input: z.object({}).strict(),
+    input: z.object({ threadIds: orderedIds.optional() }).strict(),
     output: z
       .object({
         deletedCount: z.number().int().nonnegative(),

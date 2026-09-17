@@ -56,7 +56,8 @@ collapse/expand-all button beside New collection. Collection names and
 membership are shared across clients; collapsed state is kept per client.
 Project action menus keep Rename project and Delete project, and Clear threads
 removes inactive threads while preserving running, attention, and error threads.
-The personal Chats header also provides Clear chats with the same protection.
+The personal Chats header also provides Clear chats with the same protection. Both clear
+dialogs offer Bulk deletions to pick specific threads or chats to delete.
 Deleting a Collection returns its projects to the flat list and does not delete
 the projects or threads. The personal **Threads** project is always kept out of
 Collections.

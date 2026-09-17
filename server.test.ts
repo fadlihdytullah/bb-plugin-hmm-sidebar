@@ -259,6 +259,13 @@ describe("Hmm Sidebar backend", () => {
     hosts.push(host);
     await plugin(host.bb);
 
+    const scoped = await host.harness.behavior.callRpc("projects_clear_threads", {
+      projectId: "project-1",
+      threadIds: ["running"],
+    });
+    expect(scoped).toEqual({ deletedCount: 0, preservedCount: 1 });
+    expect(rows.has("running")).toBe(true);
+
     const result = (await host.harness.behavior.callRpc("projects_clear_threads", {
       projectId: "project-1",
     })) as { deletedCount: number; preservedCount: number };
@@ -329,6 +336,12 @@ describe("Hmm Sidebar backend", () => {
     });
     hosts.push(host);
     await plugin(host.bb);
+
+    const scoped = await host.harness.behavior.callRpc("chats_clear", {
+      threadIds: ["personal-running"],
+    });
+    expect(scoped).toEqual({ deletedCount: 0, preservedCount: 1 });
+    expect(deleteThread).not.toHaveBeenCalled();
 
     const result = await host.harness.behavior.callRpc("chats_clear", {});
 
