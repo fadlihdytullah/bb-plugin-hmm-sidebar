@@ -32,7 +32,6 @@ results, **Enter** opens the selected thread, and **Cmd+Enter** opens a split.
 The palette is centered horizontally at 15% from the top of BB's main chat
 container.
 Because BB's thread-list replacement slot is exclusive, selecting Hmm Sidebar uses
-one composed list; selecting Active Chats Sidebar keeps its list and exposes
-Collections through the footer disclosure.
+one composed list.
 
 Repository: [fadlihdytullah/bb-plugin-hmm-sidebar](https://github.com/fadlihdytullah/bb-plugin-hmm-sidebar)

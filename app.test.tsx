@@ -787,36 +787,6 @@ describe("Hmm Sidebar app", () => {
     expect(within(activity).getByText("Build API")).toBeTruthy();
   });
 
-  it("exposes collections as an additive footer disclosure", async () => {
-    const disclosure = app.experimentalSidebarFooterItems.find(
-      (item) => item.kind === "disclosure",
-    );
-    expect(disclosure?.kind).toBe("disclosure");
-    if (disclosure === undefined || disclosure.kind !== "disclosure") {
-      throw new Error("Collections footer disclosure was not registered");
-    }
-    const slot = renderSlot(
-      disclosure,
-      { dismiss: vi.fn() },
-      {
-        sidebarThreads: {
-          status: "ready",
-          threads: [],
-          projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
-        },
-        rpc: {
-          collections_list: () => ({
-            collections: [
-              { id: "collection-1", name: "Work", position: 0, projectIds: [] },
-            ],
-          }),
-        },
-      },
-    );
-
-    expect(await slot.findByText("Work")).toBeTruthy();
-  });
-
   it("opens Activity with Cmd+E and searches by title or project", async () => {
     const slot = renderSlot(activityPalette, {}, {
       sidebarThreads: {

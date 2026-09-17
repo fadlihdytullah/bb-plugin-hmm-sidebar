@@ -30,9 +30,7 @@ bb plugin reload hmm-sidebar
 
 Then select **Hmm Sidebar** under **Settings → Appearance → Sidebar**.
 BB allows only one plugin to replace the thread list, so this plugin includes
-the **Active Chats Sidebar** activity panel when it is selected. If
-`active-chats-sidebar` is selected instead, the Collections folder button is
-available in the sidebar footer as an additive disclosure.
+the **Active Chats Sidebar** activity panel when it is selected.
 
 Select **Hmm Sidebar actions** under **Settings → Appearance → Navigation** to
 use the compact action bar. In **Customize sidebar**, optional host and plugin

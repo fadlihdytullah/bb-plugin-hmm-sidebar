@@ -3,10 +3,8 @@ import {
   definePluginApp,
   experimental_useSidebarThreadActions,
   experimental_useSidebarThreads,
-  useBbContext,
   useRpc,
   type PluginThreadListProps,
-  type ExperimentalSidebarFooterDisclosureProps,
 } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
 import { ActionMenu, type ActionMenuItem } from "@/components/action-menu";
@@ -54,75 +52,16 @@ function reportError(cause: unknown): void {
 type CollectionsViewProps = Pick<
   PluginThreadListProps,
   "activeThreadId" | "onNavigate"
-> & {
-  includeActivity?: boolean;
-};
+>;
 
 type ProjectSort = "name-asc" | "name-desc";
 type ProjectFilter = "all" | "with-chats" | "without-chats";
 type ChatSort = "recent" | "oldest" | "name-asc";
 type ChatFilter = "all" | "unread" | "pinned";
 
-function SidebarHeader({
-  onCreateCollection,
-  onRefresh,
-}: {
-  onCreateCollection: () => void;
-  onRefresh: () => void;
-}) {
-  const items: readonly ActionMenuItem[] = [
-    {
-      id: "create-collection",
-      label: "Create collection",
-      onSelect: onCreateCollection,
-    },
-    {
-      id: "refresh-sidebar",
-      label: "Refresh sidebar",
-      onSelect: onRefresh,
-    },
-  ];
-
-  return (
-    <header
-      aria-label="Hmm Sidebar"
-      className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 px-3 py-3"
-      data-testid="sidebar-brand"
-    >
-      <div className="flex min-w-0 items-center gap-2.5">
-        <div
-          role="img"
-          aria-label="BB"
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background"
-        >
-          <span className="select-none text-[13px] font-semibold leading-none tracking-[-0.12em]">
-            bb
-          </span>
-        </div>
-        <div className="min-w-0">
-          <h1 className="truncate text-[13px] font-semibold leading-5 text-foreground">
-            Hmm Sidebar
-          </h1>
-          <p className="truncate text-[10px] leading-4 text-muted-foreground">
-            Collections &amp; chats
-          </p>
-        </div>
-      </div>
-      <ActionMenu
-        label="Hmm Sidebar options"
-        items={items}
-        triggerClassName="opacity-100"
-      >
-        <Icon name="MoreHorizontal" className="size-4" aria-hidden="true" />
-      </ActionMenu>
-    </header>
-  );
-}
-
 function CollectionsSidebar({
   activeThreadId,
   onNavigate,
-  includeActivity = true,
 }: CollectionsViewProps) {
   const { status, threads, projects } = experimental_useSidebarThreads();
   const collectionsState = useCollections();
@@ -386,12 +325,6 @@ function CollectionsSidebar({
       className="flex h-full min-h-0 flex-col"
       onDragEnd={() => setLooseDropActive(false)}
     >
-      {!includeActivity ? (
-        <SidebarHeader
-          onCreateCollection={openCreate}
-          onRefresh={() => void collectionsState.refresh()}
-        />
-      ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-3">
       <div className="mb-1 flex items-center justify-between px-1.5">
         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
@@ -730,7 +663,7 @@ function CollectionsSidebar({
       </Dialog>
     </div>
 
-      {includeActivity && status === "ready" ? (
+      {status === "ready" ? (
         <ActivityPanel
           threads={threads}
           projects={projects}
@@ -744,20 +677,6 @@ function CollectionsSidebar({
 
 function CollectionsThreadList(props: PluginThreadListProps) {
   return <CollectionsSidebar {...props} />;
-}
-
-function CollectionsDisclosure({
-  dismiss,
-}: ExperimentalSidebarFooterDisclosureProps) {
-  const { threadId } = useBbContext();
-
-  return (
-    <CollectionsSidebar
-      activeThreadId={threadId}
-      onNavigate={dismiss}
-      includeActivity={false}
-    />
-  );
 }
 
 export default definePluginApp((app) => {
@@ -778,12 +697,5 @@ export default definePluginApp((app) => {
     description:
       "Group BB projects into collapsible collections and keep active chats visible.",
     component: CollectionsThreadList,
-  });
-  app.experimental_sidebarFooter.register({
-    kind: "disclosure",
-    id: "collections",
-    label: "Collections",
-    icon: "Folder",
-    component: CollectionsDisclosure,
   });
 });
