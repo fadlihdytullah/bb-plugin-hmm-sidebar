@@ -66,6 +66,10 @@ Deleting a Collection returns its projects to the flat list and does not delete
 the projects or threads. The personal **Threads** project is always kept out of
 Collections.
 
+Rows use a compact density: thread rows are 20px tall, project and Collection
+rows 24px, and their hover actions shrink to match. Projects with no threads
+show only their header, without a placeholder row.
+
 Build and test locally:
 
 ```sh

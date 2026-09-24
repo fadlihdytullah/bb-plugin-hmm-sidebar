@@ -100,7 +100,7 @@ export function CollectionRow({
     >
       <div
         draggable
-        className="group/collection flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1.5 text-xs font-semibold text-sidebar-foreground hover:bg-sidebar-accent/70"
+        className="group/collection flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-sidebar-foreground hover:bg-sidebar-accent/70"
         onDragStart={(event) => {
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData(COLLECTION_DRAG_TYPE, collection.id);
@@ -130,6 +130,7 @@ export function CollectionRow({
         </span>
         <ActionMenu
           label={`Actions for ${collection.name}`}
+          triggerClassName="size-5"
           items={[
             { id: "rename", label: "Rename collection", onSelect: onRename },
             {

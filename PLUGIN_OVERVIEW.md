@@ -19,7 +19,8 @@ personal Threads project is protected and remains outside every Collection.
 
 Thread rows continue to use BB's own navigation and actions: unread state,
 pinning, rename, archive, delete confirmation, keyboard shortcuts, and split
-view gestures. Collection data is stored in the plugin's namespaced SQLite
+view gestures. Rows use a compact density so more threads fit on screen, and
+empty projects show only their header. Collection data is stored in the plugin's namespaced SQLite
 database and updates are broadcast to other open clients.
 
 The sidebar also keeps the Active Chats activity panel visible. Working chats

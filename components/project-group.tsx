@@ -192,7 +192,7 @@ export function ProjectGroup({
     >
       <div
         draggable={!project.isPersonal}
-        className={`flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-sidebar-foreground hover:bg-sidebar-accent/70 ${
+        className={`flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-sidebar-foreground hover:bg-sidebar-accent/70 ${
           currentCollectionId !== null ? "pl-3" : ""
         }`}
         onDragStart={(event) => {
@@ -230,33 +230,31 @@ export function ProjectGroup({
         <button
           type="button"
           aria-label={`New thread in ${project.name}`}
-          className="flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-state-hover hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/project:opacity-100"
+          className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-state-hover hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/project:opacity-100"
           onClick={() => actions.openNewThread({ projectId: project.id, focusPrompt: true })}
         >
           <Icon name="MessageSquarePlus" className="size-3.5" aria-hidden="true" />
         </button>
         {!project.isPersonal ? (
-          <ActionMenu label={`Actions for ${project.name}`} items={projectItems}>
+          <ActionMenu
+            label={`Actions for ${project.name}`}
+            items={projectItems}
+            triggerClassName="size-5"
+          >
             <Icon name="MoreHorizontal" className="size-4" aria-hidden="true" />
           </ActionMenu>
         ) : null}
       </div>
-      {expanded ? (
-        <ul className="ml-3 border-l border-border/60 pl-1">
-          {visibleThreads.length > 0 ? (
-            visibleThreads.map((thread) => (
-              <ThreadRow
-                key={thread.id}
-                thread={thread}
-                activeThreadId={activeThreadId}
-                onNavigate={onNavigate}
-              />
-            ))
-          ) : (
-            <li className="list-none px-2 py-1 text-[11px] text-muted-foreground">
-              No threads yet
-            </li>
-          )}
+      {expanded && visibleThreads.length > 0 ? (
+        <ul className="ml-2 border-l border-border/60 pl-1">
+          {visibleThreads.map((thread) => (
+            <ThreadRow
+              key={thread.id}
+              thread={thread}
+              activeThreadId={activeThreadId}
+              onNavigate={onNavigate}
+            />
+          ))}
         </ul>
       ) : null}
       <NameDialog
