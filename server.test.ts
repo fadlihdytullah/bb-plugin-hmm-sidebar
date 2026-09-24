@@ -6,6 +6,7 @@ import plugin from "./server";
 const hosts: Array<ReturnType<typeof createFakePluginHost>> = [];
 const updateProject = vi.fn(async () => ({ ok: true }));
 const deleteProject = vi.fn(async () => ({ ok: true }));
+const spawnThread = vi.fn(async () => ({ id: "thread-new" }));
 
 type ThreadRow = Awaited<ReturnType<BbPluginApi["sdk"]["threads"]["list"]>>[number];
 
@@ -66,6 +67,9 @@ async function startHost() {
         update: updateProject,
         delete: deleteProject,
       },
+      threads: {
+        spawn: spawnThread,
+      },
     },
   });
   hosts.push(host);
@@ -109,6 +113,27 @@ describe("Hmm Sidebar backend", () => {
     ]);
     expect(host.harness.inspection.realtimeSignals.at(-1)?.channel).toBe(
       "collections-changed",
+    );
+  });
+
+  it("spawns a thread from a sanitized composer request", async () => {
+    const host = await startHost();
+    const result = await host.harness.behavior.callRpc("threads_spawn", {
+      request: {
+        projectId: "project-1",
+        providerId: "codex",
+        model: "gpt-5",
+        reasoningLevel: "medium",
+        permissionMode: "auto",
+        environment: { type: "project-default" },
+        input: [{ type: "text", text: "hello", mentions: [] }],
+        parentThreadId: "ignored",
+      },
+    });
+
+    expect(result).toEqual({ threadId: "thread-new" });
+    expect(spawnThread).toHaveBeenCalledWith(
+      expect.not.objectContaining({ parentThreadId: expect.anything() }),
     );
   });
 

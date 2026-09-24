@@ -18,6 +18,7 @@ const app = await loadPluginApp(() => import("./app"));
 const threadList = app.threadLists[0]!;
 const sidebarNavigation = app.experimentalSidebarNavigations[0]!;
 const activityPalette = app.appOverlays[0]!;
+const splitThreadComposer = app.appOverlays[1]!;
 
 const navigationItems: readonly ExperimentalSidebarNavigationItem[] = [
   {
@@ -85,11 +86,17 @@ function thread(id: string, projectId: string): PluginSidebarThread {
     projectId,
     title: id,
     titleFallback: null,
+    displayTitle: id,
     parentThreadId: null,
+    lifecycleOwnerThreadId: null,
+    sourceThreadId: null,
     sectionId: null,
     originKind: null,
     originPluginId: null,
     providerId: "codex",
+    status: "idle",
+    runtimeStatus: "idle",
+    queuedWork: "none",
     hasPendingInteraction: false,
     activity: {
       workflows: 0,
@@ -102,7 +109,12 @@ function thread(id: string, projectId: string): PluginSidebarThread {
     indicatorLabel: null,
     isUnread: false,
     isPinned: false,
+    pinnedAt: null,
+    pinSortKey: null,
     isArchived: false,
+    archivedAt: null,
+    href: "",
+    isHidden: false,
     environment: null,
     host: null,
     createdAt: 1,
@@ -129,9 +141,48 @@ afterEach(() => {
 
 describe("Hmm Sidebar app", () => {
   it("registers an app-wide Activity palette", () => {
-    expect(app.appOverlays).toHaveLength(1);
+    expect(app.appOverlays).toHaveLength(2);
     expect(activityPalette.id).toBe("activity-palette");
   });
+
+  it.each([
+    { known: true, opens: 1 },
+    { known: false, opens: 0 },
+  ])(
+    "opens the spawned thread in a split once the sidebar knows it ($known)",
+    async ({ known, opens }) => {
+      const slot = renderSlot(splitThreadComposer, {}, {
+        context: { projectId: "project-1" },
+        sidebarThreads: {
+          status: "ready",
+          threads: known ? [thread("thread-new", "project-1")] : [],
+          projects: [],
+        },
+        rpc: {
+          threads_spawn: () => ({ threadId: "thread-new" }),
+        },
+      });
+
+      window.dispatchEvent(new CustomEvent("hmm-sidebar:new-thread-split"));
+      const composer = await slot.findByTestId("bb-new-thread-composer");
+      expect(composer.dataset.defaultProjectId).toBe("project-1");
+      fireEvent.click(slot.getByTestId("bb-new-thread-composer-submit"));
+
+      await waitFor(() =>
+        expect(slot.queryByTestId("bb-new-thread-composer")).toBeNull(),
+      );
+      expect(slot.inspection.rpcCalls[0]?.method).toBe("threads_spawn");
+      expect(
+        slot.inspection.sidebarActionCalls.filter(
+          (call) => call.method === "open",
+        ),
+      ).toEqual(
+        opens === 0
+          ? []
+          : [{ method: "open", threadId: "thread-new", options: { split: true } }],
+      );
+    },
+  );
 
   it("positions Activity at the top center of the chat container", async () => {
     const chatContainer = document.createElement("main");
@@ -142,7 +193,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [runningThread("Build API", "project-1")],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
     });
 
@@ -247,8 +298,8 @@ describe("Hmm Sidebar app", () => {
         status: "ready",
         threads: [thread("Build API", "project-1"), thread("Personal note", "threads")],
         projects: [
-          { id: "project-1", name: "Engineering", isPersonal: false },
-          { id: "threads", name: "Threads", isPersonal: true },
+          { id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" },
+          { id: "threads", name: "Threads", isPersonal: true, href: "", settingsHref: "" },
         ],
       },
       rpc: {
@@ -278,7 +329,7 @@ describe("Hmm Sidebar app", () => {
           { ...thread("Older chat", "threads"), updatedAt: 1 },
           { ...thread("Newer chat", "threads"), updatedAt: 5, isUnread: true },
         ],
-        projects: [{ id: "threads", name: "Threads", isPersonal: true }],
+        projects: [{ id: "threads", name: "Threads", isPersonal: true, href: "", settingsHref: "" }],
       },
       rpc: { collections_list: () => ({ collections: [] }) },
     });
@@ -309,7 +360,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [thread("Personal note", "threads")],
-        projects: [{ id: "threads", name: "Threads", isPersonal: true }],
+        projects: [{ id: "threads", name: "Threads", isPersonal: true, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
@@ -334,7 +385,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [thread("Note A", "threads"), thread("Note B", "threads")],
-        projects: [{ id: "threads", name: "Threads", isPersonal: true }],
+        projects: [{ id: "threads", name: "Threads", isPersonal: true, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
@@ -364,9 +415,9 @@ describe("Hmm Sidebar app", () => {
         status: "ready",
         threads: [],
         projects: [
-          { id: "z-project", name: "Zulu", isPersonal: false },
-          { id: "a-project", name: "Alpha", isPersonal: false },
-          { id: "personal", name: "Threads", isPersonal: true },
+          { id: "z-project", name: "Zulu", isPersonal: false, href: "", settingsHref: "" },
+          { id: "a-project", name: "Alpha", isPersonal: false, href: "", settingsHref: "" },
+          { id: "personal", name: "Threads", isPersonal: true, href: "", settingsHref: "" },
         ],
       },
       rpc: {
@@ -390,8 +441,8 @@ describe("Hmm Sidebar app", () => {
         status: "ready",
         threads: [thread("Active project chat", "with-chat")],
         projects: [
-          { id: "with-chat", name: "With chat", isPersonal: false },
-          { id: "without-chat", name: "Without chat", isPersonal: false },
+          { id: "with-chat", name: "With chat", isPersonal: false, href: "", settingsHref: "" },
+          { id: "without-chat", name: "Without chat", isPersonal: false, href: "", settingsHref: "" },
         ],
       },
       rpc: {
@@ -425,7 +476,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [thread("Build API", "project-1")],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({
@@ -462,7 +513,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [thread("Build API", "project-1")],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({
@@ -491,7 +542,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [thread("Build API", "project-1")],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
@@ -524,7 +575,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [thread("Build API", "project-1")],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
@@ -547,7 +598,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [thread("Task A", "project-1"), thread("Task B", "project-1")],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
@@ -581,7 +632,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
@@ -637,7 +688,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({
@@ -668,7 +719,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
@@ -698,7 +749,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [runningThread("Build API", "project-1")],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
@@ -717,7 +768,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [{ ...thread("Idle chat", "project-1"), isPinned: true }],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
@@ -742,7 +793,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready" as const,
         threads: [runningThread("Build API", "project-1")],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
@@ -768,7 +819,7 @@ describe("Hmm Sidebar app", () => {
       sidebarThreads: {
         status: "ready",
         threads: [runningThread("Build API", "project-1")],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
@@ -793,8 +844,8 @@ describe("Hmm Sidebar app", () => {
         status: "ready",
         threads: [runningThread("Build API", "project-1"), thread("Personal note", "threads")],
         projects: [
-          { id: "project-1", name: "Engineering", isPersonal: false },
-          { id: "threads", name: "Threads", isPersonal: true },
+          { id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" },
+          { id: "threads", name: "Threads", isPersonal: true, href: "", settingsHref: "" },
         ],
       },
     });
@@ -823,7 +874,7 @@ describe("Hmm Sidebar app", () => {
           { ...thread("Needs review", "project-1"), hasPendingInteraction: true },
           runningThread("Build API", "project-1"),
         ],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
     });
 
@@ -853,7 +904,7 @@ describe("Hmm Sidebar app", () => {
           runningThread("Build API", "project-1"),
           { ...thread("Pinned note", "project-1"), isPinned: true },
         ],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false }],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
     });
 

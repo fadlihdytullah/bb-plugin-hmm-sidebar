@@ -31,6 +31,11 @@ search matches thread titles and project names, arrow keys move through the
 results, **Enter** opens the selected thread, and **Cmd+Enter** opens a split.
 The palette is centered horizontally at 15% from the top of BB's main chat
 container.
+
+**Hmm Sidebar: New thread in split** in the command palette (**Cmd+Shift+P**)
+opens BB's full new-thread composer in a dialog and opens the started thread in
+a split, only in the window that ran the command.
+
 Because BB's thread-list replacement slot is exclusive, selecting Hmm Sidebar uses
 one composed list.
 

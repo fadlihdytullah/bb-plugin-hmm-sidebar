@@ -1,5 +1,22 @@
-import { defineRpcContract } from "@get-bb/plugin-sdk";
+import { defineRpcContract, type NewThreadRequest } from "@get-bb/plugin-sdk";
 import { z } from "zod";
+
+// ponytail: shallow shape check that strips unknown keys; bb.sdk.threads.spawn
+// validates the nested environment and prompt input itself.
+const newThreadRequestSchema = z
+  .object({
+    projectId: z.string().min(1).max(500),
+    providerId: z.string().min(1),
+    model: z.string().min(1),
+    reasoningLevel: z.string().min(1),
+    permissionMode: z.string().min(1),
+    serviceTier: z.string().min(1).optional(),
+    executionInputSources: z.record(z.string(), z.string()).default({}),
+    environment: z.looseObject({ type: z.string().min(1) }),
+    input: z.array(z.looseObject({ type: z.string().min(1) })).min(1).max(128),
+    sendAt: z.number().int().nonnegative().optional(),
+  })
+  .transform((request) => request as unknown as NewThreadRequest);
 
 const collectionId = z.string().trim().min(1).max(200);
 const projectId = z.string().trim().min(1).max(500);
@@ -87,6 +104,10 @@ export const rpcContract = defineRpcContract({
       .object({ collectionId, projectIds: orderedIds })
       .strict(),
     output: z.object({ ok: z.literal(true) }).strict(),
+  },
+  threads_spawn: {
+    input: z.object({ request: newThreadRequestSchema }).strict(),
+    output: z.object({ threadId: z.string() }).strict(),
   },
 });
 

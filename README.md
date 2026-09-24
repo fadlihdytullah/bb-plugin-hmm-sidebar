@@ -48,6 +48,12 @@ attention, Pinned, and Recents with the arrow keys, press **Enter** to open a
 thread, or **Cmd+Enter** to open it in a split. The palette is centered
 horizontally at 15% from the top of BB's main chat container.
 
+Run **Hmm Sidebar: New thread in split** from BB's command palette
+(**Cmd+Shift+P**) to open BB's new-thread composer in a dialog, seeded with the
+current project. Submitting starts the thread and opens it in a split in the
+same BB window only; other open BB windows are unaffected. Bind a shortcut to it
+under **Settings → Keyboard**.
+
 Collections are plugin-owned state. Create one with the folder-plus button or
 drag projects into it. The Collections header also includes a
 collapse/expand-all button beside New collection. Collection names and

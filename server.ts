@@ -410,6 +410,10 @@ export default async function plugin(bb: BbPluginApi) {
       await reorderProjects(collectionId, projectIds);
       return { ok: true as const };
     },
+    threads_spawn: async ({ request }) => {
+      const thread = await bb.sdk.threads.spawn(request);
+      return { threadId: thread.id };
+    },
   });
 
   bb.onDispose(() => {

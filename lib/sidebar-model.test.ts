@@ -13,11 +13,17 @@ function thread(id: string, projectId: string): PluginSidebarThread {
     projectId,
     title: id,
     titleFallback: null,
+    displayTitle: id,
     parentThreadId: null,
+    lifecycleOwnerThreadId: null,
+    sourceThreadId: null,
     sectionId: null,
     originKind: null,
     originPluginId: null,
     providerId: "codex",
+    status: "idle",
+    runtimeStatus: "idle",
+    queuedWork: "none",
     hasPendingInteraction: false,
     activity: {
       workflows: 0,
@@ -30,7 +36,12 @@ function thread(id: string, projectId: string): PluginSidebarThread {
     indicatorLabel: null,
     isUnread: false,
     isPinned: false,
+    pinnedAt: null,
+    pinSortKey: null,
     isArchived: false,
+    archivedAt: null,
+    href: "",
+    isHidden: false,
     environment: null,
     host: null,
     createdAt: 1,
@@ -41,7 +52,7 @@ function thread(id: string, projectId: string): PluginSidebarThread {
 }
 
 function project(id: string, name: string, isPersonal = false): PluginSidebarProject {
-  return { id, name, isPersonal };
+  return { id, name, isPersonal, href: "", settingsHref: "" };
 }
 
 function collection(id: string, name: string, projectIds: string[]): Collection {

@@ -10,6 +10,10 @@ import { toast } from "sonner";
 import { ActionMenu, type ActionMenuItem } from "@/components/action-menu";
 import { ActivityPanel } from "@/components/activity-panel";
 import { ActivityPalette } from "@/components/activity-palette";
+import {
+  OPEN_SPLIT_COMPOSER_EVENT,
+  SplitThreadComposer,
+} from "@/components/split-thread-composer";
 import { NameDialog } from "@/components/name-dialog";
 import { CollectionRow } from "@/components/collection-row";
 import {
@@ -683,6 +687,17 @@ export default definePluginApp((app) => {
   app.slots.experimental_appOverlay({
     id: "activity-palette",
     component: ActivityPalette,
+  });
+  app.slots.experimental_appOverlay({
+    id: "split-thread-composer",
+    component: SplitThreadComposer,
+  });
+  app.commands.register({
+    id: "new-thread-split",
+    title: "Hmm Sidebar: New thread in split",
+    run: () => {
+      window.dispatchEvent(new CustomEvent(OPEN_SPLIT_COMPOSER_EVENT));
+    },
   });
   app.slots.experimental_sidebarNavigation({
     id: "compact-actions",
