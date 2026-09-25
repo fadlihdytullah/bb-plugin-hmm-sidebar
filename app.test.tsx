@@ -5,6 +5,7 @@ import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type {
   ExperimentalSidebarNavigationItem,
   ExperimentalSidebarNavigationProps,
+  PluginCommandRegistration,
   PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 
@@ -141,8 +142,51 @@ afterEach(() => {
 
 describe("Hmm Sidebar app", () => {
   it("registers an app-wide Activity palette", () => {
-    expect(app.appOverlays).toHaveLength(2);
+    expect(app.appOverlays).toHaveLength(3);
     expect(activityPalette.id).toBe("activity-palette");
+  });
+
+  it("deletes the current thread through bb's confirmation via Mod+Shift+Backspace", () => {
+    // The harness collects commands but does not type them yet.
+    const { commandPaletteActions } = app as unknown as {
+      commandPaletteActions: PluginCommandRegistration[];
+    };
+    const command = commandPaletteActions.find(
+      (entry) => entry.id === "delete-current-thread",
+    )!;
+    expect(command.defaultShortcut).toMatchObject({ key: "Backspace", mod: true, shift: true });
+    const context = { projectId: null, openPanel: () => false };
+    expect(command.isAvailable?.({ ...context, threadId: null })).toBe(false);
+
+    const slot = renderSlot(app.appOverlays[2]!, {});
+    command.run({ ...context, threadId: "thread-1" });
+    expect(slot.inspection.sidebarActionCalls).toEqual([
+      { method: "requestDelete", threadId: "thread-1" },
+    ]);
+  });
+
+  it.each([
+    { focused: "thread-2", deleted: [{ method: "requestDelete", threadId: "thread-2" }] },
+    { focused: null, deleted: [] },
+  ])("deletes only the focused split pane's thread ($focused)", ({ focused, deleted }) => {
+    const { commandPaletteActions } = app as unknown as {
+      commandPaletteActions: PluginCommandRegistration[];
+    };
+    const command = commandPaletteActions.find(
+      (entry) => entry.id === "delete-current-thread",
+    )!;
+    const rect = { x: 0, y: 0, width: 0.5, height: 1 };
+    const slot = renderSlot(app.appOverlays[2]!, {}, {
+      sidebarSplitLayout: {
+        panes: [
+          { paneId: "a", rect, threadId: "thread-1", isFocused: false },
+          { paneId: "b", rect, threadId: focused, isFocused: true },
+        ],
+      },
+    });
+
+    command.run({ projectId: null, openPanel: () => false, threadId: "thread-1" });
+    expect(slot.inspection.sidebarActionCalls).toEqual(deleted);
   });
 
   it.each([

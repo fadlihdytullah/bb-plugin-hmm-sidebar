@@ -12,7 +12,7 @@
   },
   "engines": {
     "bb": ">=0.42",
-    "bbPluginSdk": ">=0.4.91"
+    "bbPluginSdk": ">=0.4.92"
   },
   "bb": {
     "name": "Hmm Sidebar",

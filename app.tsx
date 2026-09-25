@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type DragEvent } from "react";
 import {
   definePluginApp,
   experimental_useSidebarThreadActions,
   experimental_useSidebarThreads,
   useRpc,
+  useSidebarSplitLayout,
   type PluginThreadListProps,
 } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
@@ -683,6 +684,29 @@ function CollectionsThreadList(props: PluginThreadListProps) {
   return <CollectionsSidebar {...props} />;
 }
 
+const DELETE_THREAD_EVENT = "hmm-sidebar:delete-thread";
+
+/**
+ * Commands run outside React, but `requestDelete` (bb's own confirmation
+ * dialog) is only reachable through a hook, so the command hands the thread
+ * id to this always-mounted overlay. In a split the command's thread is the
+ * route's, not the pane the user is in, so the focused pane wins.
+ */
+function DeleteThreadListener() {
+  const actions = experimental_useSidebarThreadActions();
+  const split = useSidebarSplitLayout();
+  const focusedThreadId = split?.panes.find((pane) => pane.isFocused)?.threadId ?? null;
+  useEffect(() => {
+    const onDelete = (event: Event) => {
+      const threadId = split ? focusedThreadId : (event as CustomEvent<string>).detail;
+      if (threadId !== null) actions.requestDelete(threadId);
+    };
+    window.addEventListener(DELETE_THREAD_EVENT, onDelete);
+    return () => window.removeEventListener(DELETE_THREAD_EVENT, onDelete);
+  }, [actions, split, focusedThreadId]);
+  return null;
+}
+
 export default definePluginApp((app) => {
   app.slots.experimental_appOverlay({
     id: "activity-palette",
@@ -697,6 +721,21 @@ export default definePluginApp((app) => {
     title: "Hmm Sidebar: New thread in split",
     run: () => {
       window.dispatchEvent(new CustomEvent(OPEN_SPLIT_COMPOSER_EVENT));
+    },
+  });
+  app.slots.experimental_appOverlay({
+    id: "delete-thread-listener",
+    component: DeleteThreadListener,
+  });
+  app.commands.register({
+    id: "delete-current-thread",
+    title: "Hmm Sidebar: Delete current thread",
+    // macOS labels Backspace as "delete".
+    defaultShortcut: { key: "Backspace", mod: true, shift: true },
+    isAvailable: ({ threadId }) => threadId !== null,
+    run: ({ threadId }) => {
+      if (threadId === null) return;
+      window.dispatchEvent(new CustomEvent(DELETE_THREAD_EVENT, { detail: threadId }));
     },
   });
   app.slots.experimental_sidebarNavigation({
