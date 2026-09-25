@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import type { Collection } from "@/contract";
 import { ActionMenu } from "@/components/action-menu";
+import { ShowMoreButton, useShowMore } from "@/components/show-more";
+import { isThreadHighlighted } from "@/components/thread-row";
 import { Icon } from "@/components/ui/icon";
 import {
   COLLECTION_DRAG_TYPE,
@@ -58,6 +60,20 @@ export function CollectionRow({
     previousExpanded.current = expanded;
   }, [expanded]);
 
+  const {
+    shown: shownProjects,
+    hiddenCount,
+    expanded: showAllProjects,
+    canToggle,
+    toggle: toggleProjects,
+  } = useShowMore(projects, (entry) =>
+    entry.threads.some(
+      (thread) =>
+        !thread.isArchived &&
+        (thread.id === activeThreadId || isThreadHighlighted(thread)),
+    ),
+  );
+
   const handleToggle = () => {
     if (expanded) {
       setProjectsInitiallyExpanded(false);
@@ -100,7 +116,7 @@ export function CollectionRow({
     >
       <div
         draggable
-        className="group/collection flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-sidebar-foreground hover:bg-sidebar-accent/70"
+        className="group/collection flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-sidebar-foreground/70 hover:bg-sidebar-accent/70"
         onDragStart={(event) => {
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData(COLLECTION_DRAG_TYPE, collection.id);
@@ -114,15 +130,14 @@ export function CollectionRow({
           className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           onClick={handleToggle}
         >
-          <Icon
-            name="ChevronDown"
-            className={`size-3.5 transition-transform motion-reduce:transition-none ${
-              expanded ? "" : "-rotate-90"
-            }`}
-            aria-hidden="true"
-          />
+          <Icon name="Folder" className="size-3.5" aria-hidden="true" />
         </button>
-        <span className="min-w-0 flex-1 truncate" title={collection.name}>
+        {/* Pointer shortcut for the toggle button, which stays the keyboard target. */}
+        <span
+          className="min-w-0 flex-1 cursor-pointer select-none truncate"
+          title={collection.name}
+          onClick={handleToggle}
+        >
           {collection.name}
         </span>
         <span className="tabular-nums text-[10px] font-normal text-muted-foreground">
@@ -145,9 +160,15 @@ export function CollectionRow({
         </ActionMenu>
       </div>
       {expanded ? (
-        <ul className="space-y-px pl-1">
+        <ul
+          className={`space-y-px pl-1 ${
+            hiddenCount > 0
+              ? "[&>li:last-child>div:first-child:not(:hover)]:opacity-40"
+              : ""
+          }`}
+        >
           {projects.length > 0 ? (
-            projects.map((entry, index) => (
+            shownProjects.map((entry) => (
               <ProjectGroup
                 key={entry.project.id}
                 project={entry.project}
@@ -156,7 +177,7 @@ export function CollectionRow({
                 onNavigate={onNavigate}
                 initiallyExpanded={projectsInitiallyExpanded}
                 currentCollectionId={collection.id}
-                projectIndex={index}
+                projectIndex={projects.indexOf(entry)}
                 onMoveProject={onMoveProject}
                 onError={onError}
               />
@@ -167,6 +188,14 @@ export function CollectionRow({
             </li>
           )}
         </ul>
+      ) : null}
+      {expanded && canToggle ? (
+        <ShowMoreButton
+          expanded={showAllProjects}
+          hiddenCount={hiddenCount}
+          onToggle={toggleProjects}
+          className="pl-3"
+        />
       ) : null}
     </li>
   );

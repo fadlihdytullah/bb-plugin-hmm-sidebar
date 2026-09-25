@@ -6,8 +6,10 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
 import { ActionMenu } from "@/components/action-menu";
+import { ShowMoreButton, useShowMore } from "@/components/show-more";
 import { NameDialog } from "@/components/name-dialog";
 import { Icon } from "@/components/ui/icon";
+import { isCurrentlyActive, isNeedsAttention } from "@/lib/activity-model";
 import { threadTitle } from "@/lib/sidebar-model";
 
 function indicatorClass(thread: PluginSidebarThread): string {
@@ -34,6 +36,60 @@ function indicatorClass(thread: PluginSidebarThread): string {
   }
 }
 
+/** Rows stay muted unless the thread is running or waiting on the user. */
+export function isThreadHighlighted(thread: PluginSidebarThread): boolean {
+  return isNeedsAttention(thread) || isCurrentlyActive(thread);
+}
+
+/**
+ * Shows the first few threads with a fade and a toggle for the rest. The fade
+ * targets the last row's link rather than masking the list, since a mask would
+ * clip row action menus.
+ */
+export function ThreadList({
+  threads,
+  activeThreadId,
+  onNavigate,
+  label,
+  className,
+}: {
+  threads: readonly PluginSidebarThread[];
+  activeThreadId: string | null;
+  onNavigate: () => void;
+  label?: string;
+  className?: string;
+}) {
+  const { shown, hiddenCount, expanded, canToggle, toggle } = useShowMore(
+    threads,
+    (thread) => thread.id === activeThreadId || isThreadHighlighted(thread),
+  );
+
+  return (
+    <div className={className}>
+      <ul
+        aria-label={label}
+        className={`space-y-px ${
+          hiddenCount > 0
+            ? "[&>li:last-child>a:not(:hover)]:opacity-40"
+            : ""
+        }`}
+      >
+        {shown.map((thread) => (
+          <ThreadRow
+            key={thread.id}
+            thread={thread}
+            activeThreadId={activeThreadId}
+            onNavigate={onNavigate}
+          />
+        ))}
+      </ul>
+      {canToggle ? (
+        <ShowMoreButton expanded={expanded} hiddenCount={hiddenCount} onToggle={toggle} />
+      ) : null}
+    </div>
+  );
+}
+
 export function ThreadRow({
   thread,
   activeThreadId,
@@ -48,6 +104,7 @@ export function ThreadRow({
   const [renameOpen, setRenameOpen] = useState(false);
   const title = threadTitle(thread);
   const isActive = thread.id === activeThreadId;
+  const isHighlighted = isThreadHighlighted(thread);
 
   const reportError = (cause: unknown) => {
     toast.error("Could not update thread", {
@@ -67,7 +124,9 @@ export function ThreadRow({
         className={`flex min-w-0 items-center gap-2 rounded-md px-2 py-0.5 pr-12 text-xs transition-colors motion-reduce:transition-none ${
           isActive
             ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "text-sidebar-foreground hover:bg-sidebar-accent/70"
+            : isHighlighted
+              ? "text-sidebar-foreground hover:bg-sidebar-accent/70"
+              : "text-muted-foreground/30 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
         }`}
         onClick={(event) => {
           event.preventDefault();
@@ -79,7 +138,7 @@ export function ThreadRow({
           aria-hidden="true"
           className={`size-1.5 shrink-0 rounded-full ${indicatorClass(thread)}`}
         />
-        <span className="min-w-0 flex-1 truncate font-medium leading-4">
+        <span className="min-w-0 flex-1 truncate font-normal leading-4">
           {title}
         </span>
         {thread.isUnread ? (

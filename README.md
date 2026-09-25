@@ -2,8 +2,9 @@
 
 Groups BB projects into collapsible Collections while keeping the built-in
 thread actions, keyboard shortcuts, and split navigation. The primary sidebar
-header is a single horizontal action bar: the BB logo stays on the left, while
-New thread, Search threads, and More are compact icon buttons. New thread and
+header is a single compact action bar: the pixel "suikodev" wordmark (the same
+one the mercury theme draws above the new-thread composer) stays on the left,
+while New thread, Search threads, and More are compact icon buttons. New thread and
 Search threads are always visible and cannot be unchecked; More always opens the
 remaining navigation and a compact Customize sidebar menu.
 
@@ -45,14 +46,21 @@ to hide or show the section; the choice is remembered per BB client.
 Press **Cmd+E** to open the floating Activity palette from anywhere in BB.
 Search by thread title or project, move through Currently active, Needs
 attention, Pinned, and Recents with the arrow keys, press **Enter** to open a
-thread, or **Cmd+Enter** to open it in a split. The palette is centered
-horizontally at 15% from the top of BB's main chat container.
+thread, or **Cmd+Enter** to open it in a split. Recents always lists up to five
+threads: ones opened from Activity first, then the most recently active. Each
+row shows a status dot, the thread title, and a project badge on the right. The
+palette is centered horizontally at 15% from the top of BB's main chat
+container.
 
 Run **Hmm Sidebar: New thread in split** from BB's command palette
 (**Cmd+Shift+P**) to open BB's new-thread composer in a dialog, seeded with the
 current project. Submitting starts the thread and opens it in a split in the
 same BB window only; other open BB windows are unaffected. Bind a shortcut to it
 under **Settings → Keyboard**.
+
+**Hmm Sidebar: Delete current thread** (**Cmd+Shift+Backspace**, shown as
+Cmd+Shift+Delete on macOS) opens BB's own delete confirmation for the current
+thread, or for the focused pane when a split is open.
 
 Collections are plugin-owned state. Create one with the folder-plus button or
 drag projects into it. The Collections header also includes a
@@ -68,7 +76,18 @@ Collections.
 
 Rows use a compact density: thread rows are 20px tall, project and Collection
 rows 24px, and their hover actions shrink to match. Projects with no threads
-show only their header, without a placeholder row.
+show only their header, without a placeholder row. Click a Collection or project
+name to expand or collapse it, not just its icon. Section header actions
+(Collections, Projects, Chats) appear on hover or focus, and always on touch
+screens.
+
+The list stays muted so only what matters stands out: idle threads are dimmed,
+while the open thread and threads that are running or need attention (unread,
+waiting for input, errors) are shown at full strength. Each project and the
+Chats list show up to five threads, and each Collection up to five projects,
+with a faded last row and a **Show N more** / **Show less** toggle. Threads (and
+projects holding threads) that are open, running, or need attention are never
+hidden by the limit.
 
 Build and test locally:
 

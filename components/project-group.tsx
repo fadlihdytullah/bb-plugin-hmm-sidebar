@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { ThreadRow } from "@/components/thread-row";
+import { ThreadList } from "@/components/thread-row";
 import { rpcContract } from "@/contract";
 
 export const PROJECT_DRAG_TYPE = "application/x-bb-collections-project";
@@ -192,7 +192,7 @@ export function ProjectGroup({
     >
       <div
         draggable={!project.isPersonal}
-        className={`flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-sidebar-foreground hover:bg-sidebar-accent/70 ${
+        className={`flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground ${
           currentCollectionId !== null ? "pl-3" : ""
         }`}
         onDragStart={(event) => {
@@ -220,10 +220,12 @@ export function ProjectGroup({
             aria-hidden="true"
           />
         </button>
+        {/* Pointer shortcut for the toggle button, which stays the keyboard target. */}
         <span
-          className="min-w-0 flex-1 truncate"
+          className="min-w-0 flex-1 cursor-pointer select-none truncate"
           title={project.name}
           data-testid="project-name"
+          onClick={() => setExpanded((current) => !current)}
         >
           {project.name}
         </span>
@@ -246,16 +248,14 @@ export function ProjectGroup({
         ) : null}
       </div>
       {expanded && visibleThreads.length > 0 ? (
-        <ul className="ml-2 border-l border-border/60 pl-1">
-          {visibleThreads.map((thread) => (
-            <ThreadRow
-              key={thread.id}
-              thread={thread}
-              activeThreadId={activeThreadId}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </ul>
+        <ThreadList
+          threads={visibleThreads}
+          activeThreadId={activeThreadId}
+          onNavigate={onNavigate}
+          className={`border-l border-border/60 pl-1 ${
+            currentCollectionId !== null ? "ml-3.5" : "ml-2"
+          }`}
+        />
       ) : null}
       <NameDialog
         open={renameOpen}

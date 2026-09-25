@@ -8,6 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 
+// Same pixel wordmark as the mercury theme's new-thread composer
+// (bb-mercury-theme/theme-suikodev.css).
+const SUIKODEV_WORDMARK_PATH =
+  "M0 120h480v120h-480zM0 240h120v120h-120zM0 360h480v120h-480zM360 480h120v120h-120zM0 600h480v120h-480zM600 120h120v120h-120zM960 120h120v120h-120zM600 240h120v120h-120zM960 240h120v120h-120zM600 360h120v120h-120zM960 360h120v120h-120zM600 480h120v120h-120zM960 480h120v120h-120zM600 600h480v120h-480zM1200 0h120v120h-120zM1200 240h120v120h-120zM1200 360h120v120h-120zM1200 480h120v120h-120zM1200 600h120v120h-120zM1440 0h120v120h-120zM1440 120h120v120h-120zM1800 120h120v120h-120zM1440 240h120v120h-120zM1680 240h120v120h-120zM1440 360h240v120h-240zM1440 480h120v120h-120zM1680 480h120v120h-120zM1440 600h120v120h-120zM1800 600h120v120h-120zM2040 120h480v120h-480zM2040 240h120v120h-120zM2400 240h120v120h-120zM2040 360h120v120h-120zM2400 360h120v120h-120zM2040 480h120v120h-120zM2400 480h120v120h-120zM2040 600h480v120h-480zM3000 0h120v120h-120zM2640 120h480v120h-480zM2640 240h120v120h-120zM3000 240h120v120h-120zM2640 360h120v120h-120zM3000 360h120v120h-120zM2640 480h120v120h-120zM3000 480h120v120h-120zM2640 600h480v120h-480zM3240 120h480v120h-480zM3240 240h120v120h-120zM3600 240h120v120h-120zM3240 360h480v120h-480zM3240 480h120v120h-120zM3240 600h480v120h-480zM3840 120h120v120h-120zM4200 120h120v120h-120zM3840 240h120v120h-120zM4200 240h120v120h-120zM3840 360h120v120h-120zM4200 360h120v120h-120zM3840 480h120v120h-120zM4200 480h120v120h-120zM3960 600h240v120h-240z";
+
 const HIDDEN_ITEMS_STORAGE_KEY = "hmm-sidebar.navigation.hidden-items";
 
 function readHiddenItemIds(): string[] {
@@ -107,19 +112,19 @@ export function CompactSidebarNavigation({
   return (
     <header
       aria-label="Hmm Sidebar"
-      className="flex h-14 shrink-0 items-center justify-between px-3"
+      className="flex h-10 shrink-0 items-center justify-between px-3"
       data-testid="sidebar-brand"
     >
       <div className="flex items-center">
-        <div
+        <svg
           role="img"
-          aria-label="BB"
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background"
+          aria-label="suikodev"
+          className="h-3.5 w-auto shrink-0 text-foreground"
+          viewBox="0 0 4320 720"
+          shapeRendering="crispEdges"
         >
-          <span className="select-none text-[13px] font-semibold leading-none tracking-[-0.12em]">
-            bb
-          </span>
-        </div>
+          <path fill="currentColor" d={SUIKODEV_WORDMARK_PATH} />
+        </svg>
         <h1 className="sr-only">Hmm Sidebar</h1>
       </div>
 
@@ -133,7 +138,7 @@ export function CompactSidebarNavigation({
           variant="ghost"
           size="icon"
           className={cn(
-            "size-8 rounded-md text-muted-foreground",
+            "size-7 rounded-md text-muted-foreground",
             activeItemId === newThread?.id &&
               "bg-state-active text-foreground",
           )}
@@ -152,7 +157,7 @@ export function CompactSidebarNavigation({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-8 rounded-md text-muted-foreground"
+          className="size-7 rounded-md text-muted-foreground"
           aria-label="Search threads"
           disabled={searchThreads?.isDisabled ?? true}
           onClick={() => {
@@ -177,7 +182,7 @@ export function CompactSidebarNavigation({
               type="button"
               variant="ghost"
               size="icon"
-              className="size-8 rounded-md text-muted-foreground data-[state=open]:bg-state-active data-[state=open]:text-foreground"
+              className="size-7 rounded-md text-muted-foreground data-[state=open]:bg-state-active data-[state=open]:text-foreground"
               aria-label="More sidebar navigation"
             >
               <Icon name="MoreHorizontal" className="size-4" aria-hidden="true" />

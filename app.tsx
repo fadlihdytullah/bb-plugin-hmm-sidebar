@@ -23,7 +23,7 @@ import {
   ProjectGroup,
 } from "@/components/project-group";
 import { BulkThreadPicker } from "@/components/bulk-thread-picker";
-import { ThreadRow } from "@/components/thread-row";
+import { ThreadList } from "@/components/thread-row";
 import { CompactSidebarNavigation } from "@/components/sidebar-navigation";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -53,6 +53,13 @@ function reportError(cause: unknown): void {
     description: cause instanceof Error ? cause.message : String(cause),
   });
 }
+
+/**
+ * Section header actions stay hidden until the section is hovered or holds
+ * focus; touch pointers can't hover, so they always show there.
+ */
+const SECTION_ACTIONS_CLASS =
+  "flex items-center opacity-0 transition-opacity group-hover/section:opacity-100 group-focus-within/section:opacity-100 pointer-coarse:opacity-100 motion-reduce:transition-none";
 
 type CollectionsViewProps = Pick<
   PluginThreadListProps,
@@ -330,12 +337,13 @@ function CollectionsSidebar({
       className="flex h-full min-h-0 flex-col"
       onDragEnd={() => setLooseDropActive(false)}
     >
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1">
+      <div className="group/section">
       <div className="mb-1 flex items-center justify-between px-1.5">
         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           Collections
         </span>
-        <div className="flex items-center">
+        <div className={SECTION_ACTIONS_CLASS}>
           <Button
             type="button"
             variant="ghost"
@@ -431,9 +439,15 @@ function CollectionsSidebar({
               </button>
             </div>
           ) : null}
+        </>
+      ) : null}
+      </div>
+
+      {status === "ready" && !collectionsState.isLoading ? (
+        <>
 
           <div
-            className={`mt-3 border-t border-border/60 pt-2 ${
+            className={`group/section mt-3 border-t border-border/60 pt-2 ${
               looseDropActive ? "rounded-md bg-sidebar-accent/50" : ""
             }`}
             data-loose-projects-drop-target=""
@@ -455,7 +469,7 @@ function CollectionsSidebar({
               <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Projects
               </span>
-              <div className="flex items-center">
+              <div className={SECTION_ACTIONS_CLASS}>
                 <Button
                   type="button"
                   variant="ghost"
@@ -509,12 +523,12 @@ function CollectionsSidebar({
           </div>
 
           {model.personalProject !== null ? (
-            <div className="mt-3 border-t border-border/60 pt-2">
+            <div className="group/section mt-3 border-t border-border/60 pt-2">
               <div className="mb-1 flex items-center justify-between px-1.5">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   Chats
                 </span>
-                <div className="flex items-center">
+                <div className={SECTION_ACTIONS_CLASS}>
                   <Button
                     type="button"
                     variant="ghost"
@@ -573,16 +587,12 @@ function CollectionsSidebar({
 
               {chatsExpanded ? (
                 visibleChats.length > 0 ? (
-                  <ul className="space-y-px" aria-label="Chats">
-                    {visibleChats.map((thread) => (
-                      <ThreadRow
-                        key={thread.id}
-                        thread={thread}
-                        activeThreadId={activeThreadId}
-                        onNavigate={onNavigate}
-                      />
-                    ))}
-                  </ul>
+                  <ThreadList
+                    label="Chats"
+                    threads={visibleChats}
+                    activeThreadId={activeThreadId}
+                    onNavigate={onNavigate}
+                  />
                 ) : (
                   <p className="px-2 py-1 text-[11px] text-muted-foreground">
                     {chatFilter === "all" ? "No chats yet" : "No chats match this filter"}

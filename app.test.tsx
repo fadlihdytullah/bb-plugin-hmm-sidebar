@@ -271,7 +271,7 @@ describe("Hmm Sidebar app", () => {
 
     expect(app.contentScripts).toHaveLength(0);
     expect(app.experimentalSidebarNavigations).toHaveLength(1);
-    expect(within(header).getByRole("img", { name: "BB" })).toBeTruthy();
+    expect(within(header).getByRole("img", { name: "suikodev" })).toBeTruthy();
     expect(within(actions).getAllByRole("button")).toHaveLength(3);
 
     fireEvent.click(within(actions).getByRole("button", { name: "New thread" }));
@@ -333,6 +333,31 @@ describe("Hmm Sidebar app", () => {
     expect(await slot.findByRole("menuitem", { name: "Plugin Guide" })).toBeTruthy();
   });
 
+  it("limits collection projects to five, keeping projects with highlighted threads", async () => {
+    const ids = [1, 2, 3, 4, 5, 6, 7].map((n) => `p${n}`);
+    const slot = renderSlot(threadList, listProps, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [runningThread("Running", "p7")],
+        projects: ids.map((id) => ({ id, name: `Project ${id}`, isPersonal: false, href: "", settingsHref: "" })),
+      },
+      rpc: {
+        collections_list: () => ({
+          collections: [{ id: "c1", name: "Work", position: 0, projectIds: ids }],
+        }),
+      },
+    });
+
+    await slot.findByText("Work");
+    const names = () => slot.getAllByTestId("project-name").map((node) => node.textContent);
+    expect(names()).toEqual(["Project p1", "Project p2", "Project p3", "Project p4", "Project p5", "Project p7"]);
+
+    fireEvent.click(slot.getByRole("button", { name: "Show 1 more" }));
+    expect(names()).toHaveLength(7);
+    fireEvent.click(slot.getByRole("button", { name: "Show less" }));
+    expect(names()).toHaveLength(6);
+  });
+
   it("registers one replacement list and renders collections above projects", async () => {
     expect(app.threadLists).toHaveLength(1);
     expect(threadList.id).toBe("collections");
@@ -363,6 +388,53 @@ describe("Hmm Sidebar app", () => {
       within(slot.getByRole("list", { name: "Chats" })).getByText("Personal note"),
     ).toBeTruthy();
     expect(slot.queryByRole("button", { name: "Actions for Threads" })).toBeNull();
+  });
+
+  it("mutes idle threads and highlights active or attention threads", async () => {
+    const slot = renderSlot(threadList, { ...listProps, activeThreadId: "Current" }, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [
+          thread("Idle", "threads"),
+          thread("Current", "threads"),
+          { ...thread("Waiting", "threads"), hasPendingInteraction: true },
+          runningThread("Running", "threads"),
+        ],
+        projects: [{ id: "threads", name: "Threads", isPersonal: true, href: "", settingsHref: "" }],
+      },
+      rpc: { collections_list: () => ({ collections: [] }) },
+    });
+
+    const chats = await slot.findByRole("list", { name: "Chats" });
+    const link = (name: string) => within(chats).getByText(name).closest("a")!.className;
+    expect(link("Idle")).toContain("text-muted-foreground");
+    expect(link("Current")).toContain("text-sidebar-accent-foreground");
+    expect(link("Waiting")).not.toContain("text-muted-foreground");
+    expect(link("Running")).not.toContain("text-muted-foreground");
+  });
+
+  it("limits chats to five with a toggle, keeping highlighted threads visible", async () => {
+    const slot = renderSlot(threadList, listProps, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [
+          ...[1, 2, 3, 4, 5, 6, 7].map((n) => ({ ...thread(`Chat ${n}`, "threads"), updatedAt: 10 - n })),
+          { ...runningThread("Running chat", "threads"), updatedAt: 0 },
+        ],
+        projects: [{ id: "threads", name: "Threads", isPersonal: true, href: "", settingsHref: "" }],
+      },
+      rpc: { collections_list: () => ({ collections: [] }) },
+    });
+
+    const chats = await slot.findByRole("list", { name: "Chats" });
+    const titles = () => within(chats).getAllByRole("link").map((node) => node.textContent);
+    expect(titles()).toEqual(["Chat 1", "Chat 2", "Chat 3", "Chat 4", "Chat 5", "Running chat"]);
+
+    fireEvent.click(slot.getByRole("button", { name: "Show 2 more" }));
+    expect(titles()).toHaveLength(8);
+
+    fireEvent.click(slot.getByRole("button", { name: "Show less" }));
+    expect(titles()).toHaveLength(6);
   });
 
   it("collapses, sorts and filters the flat chats list", async () => {
@@ -477,6 +549,24 @@ describe("Hmm Sidebar app", () => {
         .map((node) => node.textContent),
     ).toEqual(["Alpha", "Zulu"]);
     expect(within(projects).queryByText("Threads")).toBeNull();
+  });
+
+  it("toggles a project when its name is clicked", async () => {
+    const slot = renderSlot(threadList, listProps, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [thread("Project chat", "alpha")],
+        projects: [{ id: "alpha", name: "Alpha", isPersonal: false, href: "", settingsHref: "" }],
+      },
+      rpc: { collections_list: () => ({ collections: [] }) },
+    });
+
+    const projects = await slot.findByRole("list", { name: "Projects" });
+    fireEvent.click(within(projects).getByText("Alpha"));
+    expect(within(projects).queryByText("Project chat")).toBeNull();
+    expect(slot.getByRole("button", { name: "Expand Alpha" })).toBeTruthy();
+    fireEvent.click(within(projects).getByText("Alpha"));
+    expect(within(projects).getByText("Project chat")).toBeTruthy();
   });
 
   it("collapses all loose projects and filters the project group", async () => {
