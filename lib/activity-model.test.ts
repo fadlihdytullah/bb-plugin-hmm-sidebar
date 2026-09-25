@@ -90,6 +90,23 @@ describe("activity palette model", () => {
     ]);
   });
 
+  it("fills Recents with the most recently active threads, up to five", () => {
+    const groups = buildActivityPaletteGroups(
+      [1, 2, 3, 4, 5, 6].map((n) => thread(`t${n}`, "personal", { updatedAt: n })),
+      projects,
+      ["t1"],
+    );
+
+    expect(groups.map(({ label }) => label)).toEqual(["Recents"]);
+    expect(groups[0]!.entries.map(({ thread: value }) => value.id)).toEqual([
+      "t1",
+      "t6",
+      "t5",
+      "t4",
+      "t3",
+    ]);
+  });
+
   it("searches titles and project names while excluding archived threads", () => {
     const groups = buildActivityPaletteGroups(
       [

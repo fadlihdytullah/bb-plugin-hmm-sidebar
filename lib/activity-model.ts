@@ -3,6 +3,7 @@ import type {
   PluginSidebarThread,
   PluginSidebarThreadIndicator,
 } from "@get-bb/plugin-sdk/app";
+import { RECENTS_LIMIT } from "./recents";
 
 const ACTIVITY_KEYS = [
   "workflows",
@@ -132,7 +133,7 @@ function compareActivity(
   );
 }
 
-function isNeedsAttention(thread: PluginSidebarThread): boolean {
+export function isNeedsAttention(thread: PluginSidebarThread): boolean {
   return (
     thread.isUnread ||
     thread.hasPendingInteraction ||
@@ -141,7 +142,7 @@ function isNeedsAttention(thread: PluginSidebarThread): boolean {
   );
 }
 
-function isCurrentlyActive(thread: PluginSidebarThread): boolean {
+export function isCurrentlyActive(thread: PluginSidebarThread): boolean {
   return RUNNING_INDICATORS.has(thread.indicator) || hasLiveActivity(thread);
 }
 
@@ -182,12 +183,20 @@ export function buildActivityPaletteGroups(
   const needsAttention = take(isNeedsAttention);
   const currentlyActive = take(isCurrentlyActive);
   const pinned = take((thread) => thread.isPinned);
-  const recents = candidates
+  // Threads opened from Activity come first, then the most recently active
+  // threads fill the group so it is useful before anything has been opened.
+  const remembered = candidates
     .filter(({ thread }) => !used.has(thread.id) && recentIds.includes(thread.id))
     .sort(
       (left, right) =>
         recentIds.indexOf(right.thread.id) - recentIds.indexOf(left.thread.id),
     );
+  const recents = [
+    ...remembered,
+    ...candidates
+      .filter(({ thread }) => !used.has(thread.id) && !recentIds.includes(thread.id))
+      .sort(compareActivity),
+  ].slice(0, RECENTS_LIMIT);
 
   const groups: ActivityPaletteGroup[] = [
     { id: "needs-attention", label: "Needs attention", icon: "AlertCircle", entries: needsAttention },

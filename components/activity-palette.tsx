@@ -11,6 +11,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
 import { rememberRecent, useRecents } from "@/hooks/use-recents";
@@ -41,7 +42,7 @@ function ActivityPaletteRow({
       role="option"
       aria-selected={selected}
       aria-label={`${title}, ${entry.project}, ${entry.status.label}`}
-      className={`flex w-full min-w-0 items-start gap-3 rounded-md px-3 py-2 text-left transition-colors motion-reduce:transition-none ${
+      className={`flex w-full min-w-0 items-center gap-3 rounded-md px-3 py-2 text-left transition-colors motion-reduce:transition-none ${
         selected
           ? "bg-state-active text-foreground"
           : "text-foreground hover:bg-state-hover"
@@ -51,21 +52,20 @@ function ActivityPaletteRow({
     >
       <span
         aria-hidden="true"
-        className="mt-1 flex size-4 shrink-0 items-center justify-center"
+        title={entry.status.label}
+        className="flex size-4 shrink-0 items-center justify-center"
       >
         <span className={`size-1.5 rounded-full ${entry.status.dotClassName}`} />
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium leading-5">
-          {title}
-        </span>
-        <span className="block truncate text-xs leading-4 text-muted-foreground">
-          #{entry.project.toLowerCase()}
-        </span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium leading-5">
+        {title}
       </span>
-      <span className="shrink-0 pt-0.5 text-[10px] text-muted-foreground">
-        {entry.status.label}
-      </span>
+      <Badge
+        variant="secondary"
+        className="max-w-[40%] shrink-0 px-1.5 py-0 text-[11px] font-medium"
+      >
+        <span className="truncate">{entry.project}</span>
+      </Badge>
     </button>
   );
 }
@@ -226,8 +226,9 @@ export function ActivityPalette() {
             placeholder="Search Activity by title or project"
             className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
           />
-          <kbd className="hidden shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground sm:inline">
-            ⌘E
+          <kbd className="hidden shrink-0 items-center rounded border border-border bg-muted px-1.5 py-1 text-xs font-medium leading-none tracking-[0.2em] text-muted-foreground sm:inline-flex">
+            {/* Mac modifier glyphs render tiny next to letters at the same size. */}
+            <span className="text-base">⌘</span>E
           </kbd>
         </div>
         <div
