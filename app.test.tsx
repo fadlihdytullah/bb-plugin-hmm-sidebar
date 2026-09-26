@@ -29,7 +29,10 @@ const navigationItems: readonly ExperimentalSidebarNavigationItem[] = [
     action: { kind: "new-thread" },
     isDisabled: false,
     shortcut: null,
-    experimental_splitProps: {},
+    isVisible: true,
+    isLoading: false,
+    pluginId: null,
+    experimental_Accessory: null,
   },
   {
     id: "search-threads",
@@ -38,7 +41,10 @@ const navigationItems: readonly ExperimentalSidebarNavigationItem[] = [
     action: { kind: "search-threads" },
     isDisabled: false,
     shortcut: null,
-    experimental_splitProps: {},
+    isVisible: true,
+    isLoading: false,
+    pluginId: null,
+    experimental_Accessory: null,
   },
   {
     id: "extensions",
@@ -47,7 +53,10 @@ const navigationItems: readonly ExperimentalSidebarNavigationItem[] = [
     action: { kind: "open-extensions" },
     isDisabled: false,
     shortcut: null,
-    experimental_splitProps: {},
+    isVisible: true,
+    isLoading: false,
+    pluginId: null,
+    experimental_Accessory: null,
   },
   {
     id: "plugin-guide",
@@ -56,20 +65,22 @@ const navigationItems: readonly ExperimentalSidebarNavigationItem[] = [
     action: { kind: "open-plugin-panel", pluginId: "docs", panelId: "guide" },
     isDisabled: false,
     shortcut: null,
-    experimental_splitProps: {},
+    isVisible: true,
+    isLoading: false,
+    pluginId: "docs",
+    experimental_Accessory: null,
   },
 ];
 
-function navigationProps(
-  activate = vi.fn(),
-): ExperimentalSidebarNavigationProps {
-  return {
-    items: navigationItems,
-    activeItemId: null,
-    isCompactViewport: false,
-    experimental_activate: activate,
-    experimental_Original: () => null,
-  };
+const navigationProps: ExperimentalSidebarNavigationProps = {
+  isCompactViewport: false,
+  experimental_Original: () => null,
+};
+
+function renderNavigation() {
+  return renderSlot(sidebarNavigation, navigationProps, {
+    sidebarNavigation: { items: navigationItems },
+  });
 }
 
 const listProps = {
@@ -264,8 +275,7 @@ describe("Hmm Sidebar app", () => {
   });
 
   it("keeps the logo and fixed actions in one official navigation header", async () => {
-    const activate = vi.fn();
-    const slot = renderSlot(sidebarNavigation, navigationProps(activate));
+    const slot = renderNavigation();
     const header = await slot.findByTestId("sidebar-brand");
     const actions = within(header).getByLabelText("Sidebar actions");
 
@@ -278,16 +288,14 @@ describe("Hmm Sidebar app", () => {
     fireEvent.click(
       within(actions).getByRole("button", { name: "Search threads" }),
     );
-    expect(activate).toHaveBeenNthCalledWith(1, "new-thread", {
-      openInSplit: false,
-    });
-    expect(activate).toHaveBeenNthCalledWith(2, "search-threads", {
-      openInSplit: false,
-    });
+    expect(slot.inspection.sidebarNavigationCalls).toEqual([
+      { method: "activate", itemId: "new-thread", openInSplit: false },
+      { method: "activate", itemId: "search-threads", openInSplit: false },
+    ]);
   });
 
   it("keeps More usable after unchecking and checking every optional action", async () => {
-    const slot = renderSlot(sidebarNavigation, navigationProps());
+    const slot = renderNavigation();
     const more = await slot.findByRole("button", {
       name: "More sidebar navigation",
     });

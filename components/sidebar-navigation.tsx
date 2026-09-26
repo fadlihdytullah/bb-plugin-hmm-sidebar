@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import type {
-  ExperimentalSidebarNavigationItem,
-  ExperimentalSidebarNavigationProps,
+import {
+  experimental_useSidebarNavigation,
+  experimental_useSidebarNavigationSplit,
+  type ExperimentalSidebarNavigationItem,
 } from "@get-bb/plugin-sdk/app";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -44,16 +45,45 @@ function MenuIcon({ item }: { item: ExperimentalSidebarNavigationItem }) {
 const menuItemClassName =
   "flex min-h-8 w-full select-none items-center gap-2 rounded px-2 text-xs text-popover-foreground outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-state-hover";
 
-export function CompactSidebarNavigation({
-  items,
-  activeItemId,
-  experimental_activate: activate,
-}: ExperimentalSidebarNavigationProps) {
+function NavigationMenuItem({
+  item,
+  onActivate,
+  onDragStart,
+}: {
+  item: ExperimentalSidebarNavigationItem;
+  onActivate: (item: ExperimentalSidebarNavigationItem, openInSplit: boolean) => void;
+  onDragStart: () => void;
+}) {
+  const { splitProps } = experimental_useSidebarNavigationSplit(item.id, {
+    activation: "distance",
+    onDragStart,
+  });
+  const openInSplitRef = useRef(false);
+  return (
+    <DropdownMenu.Item
+      disabled={item.isDisabled}
+      className={menuItemClassName}
+      onPointerDown={(event: PointerEvent<HTMLElement>) => {
+        openInSplitRef.current = event.metaKey || event.ctrlKey;
+        splitProps.onPointerDown?.(event);
+      }}
+      onSelect={() => onActivate(item, openInSplitRef.current)}
+    >
+      <MenuIcon item={item} />
+      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+    </DropdownMenu.Item>
+  );
+}
+
+export function CompactSidebarNavigation() {
+  const {
+    items,
+    activeItemId,
+    actions: { activate },
+  } = experimental_useSidebarNavigation();
   const [open, setOpen] = useState(false);
   const [customizing, setCustomizing] = useState(false);
   const [hiddenItemIds, setHiddenItemIds] = useState(readHiddenItemIds);
-  const openInSplitRef = useRef(false);
-
   const newThread = items.find((item) => item.action.kind === "new-thread");
   const searchThreads = items.find(
     (item) => item.action.kind === "search-threads",
@@ -86,18 +116,14 @@ export function CompactSidebarNavigation({
     );
   }, [hiddenIds]);
 
-  const activateItem = (item: ExperimentalSidebarNavigationItem) => {
-    activate(item.id, { openInSplit: openInSplitRef.current });
-    openInSplitRef.current = false;
-    setOpen(false);
-  };
+  const newThreadSplit = experimental_useSidebarNavigationSplit(newThread?.id ?? "");
 
-  const rememberSplitIntent = (
-    event: PointerEvent<HTMLElement>,
+  const activateItem = (
     item: ExperimentalSidebarNavigationItem,
+    openInSplit: boolean,
   ) => {
-    openInSplitRef.current = event.metaKey || event.ctrlKey;
-    item.experimental_splitProps.onPointerDown?.(event);
+    activate(item.id, { openInSplit });
+    setOpen(false);
   };
 
   const toggleSecondaryItem = (id: string, checked: boolean) => {
@@ -144,7 +170,7 @@ export function CompactSidebarNavigation({
           )}
           aria-label="New thread"
           disabled={newThread?.isDisabled ?? true}
-          {...newThread?.experimental_splitProps}
+          {...newThreadSplit.splitProps}
           onClick={() => {
             if (newThread !== undefined) {
               activate(newThread.id, { openInSplit: false });
@@ -267,16 +293,12 @@ export function CompactSidebarNavigation({
                 <>
                   {visibleSecondaryItems.length > 0 ? (
                     visibleSecondaryItems.map((item) => (
-                      <DropdownMenu.Item
+                      <NavigationMenuItem
                         key={item.id}
-                        disabled={item.isDisabled}
-                        className={menuItemClassName}
-                        onPointerDown={(event) => rememberSplitIntent(event, item)}
-                        onSelect={() => activateItem(item)}
-                      >
-                        <MenuIcon item={item} />
-                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                      </DropdownMenu.Item>
+                        item={item}
+                        onActivate={activateItem}
+                        onDragStart={() => setOpen(false)}
+                      />
                     ))
                   ) : (
                     <div className="px-2 py-2 text-xs text-muted-foreground">
