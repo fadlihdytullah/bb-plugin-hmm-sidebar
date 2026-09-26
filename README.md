@@ -74,6 +74,11 @@ Deleting a Collection returns its projects to the flat list and does not delete
 the projects or threads. The personal **Threads** project is always kept out of
 Collections.
 
+**Pin project** (and **Unpin project**) in a project's action menu adds it to a
+**Pinned** section fixed above Collections, just below the navigation bar, so
+the projects in focus right now stay visible while the rest of the list scrolls.
+Pinned projects also stay in their usual place. Pins are kept per client.
+
 Rows use a compact density: thread rows are 20px tall, project and Collection
 rows 24px, and their hover actions shrink to match. Projects with no threads
 show only their header, without a placeholder row. Click a Collection or project

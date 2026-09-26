@@ -712,7 +712,7 @@ describe("Hmm Sidebar app", () => {
     expect(menu.closest("a")).toBeNull();
   });
 
-  it("keeps only rename, clear, and delete in the project action menu", async () => {
+  it("keeps only pin, rename, clear, and delete in the project action menu", async () => {
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
         status: "ready",
@@ -727,11 +727,16 @@ describe("Hmm Sidebar app", () => {
     await slot.findByRole("button", { name: "Actions for Engineering" });
     fireEvent.click(slot.getByRole("button", { name: "Actions for Engineering" }));
     expect(within(slot.getByRole("menu", { name: "Actions for Engineering" })).getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "Pin project",
       "Rename project",
       "Clear threads",
       "Delete project",
     ]);
     expect(slot.queryByRole("menuitem", { name: /Move to|Remove from collection/ })).toBeNull();
+
+    fireEvent.click(slot.getByRole("menuitem", { name: "Pin project" }));
+    const pinned = await slot.findByRole("list", { name: "Pinned projects" });
+    expect(within(pinned).getByText("Engineering")).toBeTruthy();
   });
 
   it("bulk deletes only the selected project threads", async () => {

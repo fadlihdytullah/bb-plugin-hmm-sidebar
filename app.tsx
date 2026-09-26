@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { useCollapsedCollections } from "@/hooks/use-collapsed-collections";
 import { useCollections } from "@/hooks/use-collections";
+import { usePinnedProjects } from "@/hooks/use-pinned-projects";
 import { buildSidebarModel, threadTitle } from "@/lib/sidebar-model";
 import { rpcContract, type Collection } from "@/contract";
 import {
@@ -99,6 +100,14 @@ function CollectionsSidebar({
     () => buildSidebarModel(collectionsState.collections, projects, threads),
     [collectionsState.collections, projects, threads],
   );
+  const pinnedProjectIds = usePinnedProjects();
+  const pinnedProjects = useMemo(() => {
+    const groups = [
+      ...model.collections.flatMap((entry) => entry.projects),
+      ...model.looseProjects,
+    ];
+    return pinnedProjectIds.flatMap((id) => groups.find((entry) => entry.project.id === id) ?? []);
+  }, [model, pinnedProjectIds]);
   const collectionIds = useMemo(
     () => model.collections.map(({ collection }) => collection.id),
     [model.collections],
@@ -337,6 +346,31 @@ function CollectionsSidebar({
       className="flex h-full min-h-0 flex-col"
       onDragEnd={() => setLooseDropActive(false)}
     >
+      {pinnedProjects.length > 0 ? (
+        <div className="shrink-0 border-b border-border/60 px-2 pb-1">
+          <div className="mb-1 px-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Pinned
+            </span>
+          </div>
+          <ul className="space-y-px" aria-label="Pinned projects">
+            {pinnedProjects.map((entry, index) => (
+              <ProjectGroup
+                key={entry.project.id}
+                project={entry.project}
+                threads={entry.threads}
+                activeThreadId={activeThreadId}
+                onNavigate={onNavigate}
+                currentCollectionId={null}
+                projectIndex={index}
+                // Pinned rows are shortcuts; dropping here must not ungroup a project.
+                onMoveProject={async () => {}}
+                onError={reportError}
+              />
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1">
       <div className="group/section">
       <div className="mb-1 flex items-center justify-between px-1.5">

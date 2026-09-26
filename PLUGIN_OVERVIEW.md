@@ -17,6 +17,9 @@ The personal Chats header also provides Clear chats with the same protection. Bo
 dialogs offer Bulk deletions to pick specific threads or chats to delete.
 Deleting a Collection simply returns its projects to the ungrouped list. The
 personal Threads project is protected and remains outside every Collection.
+Pin project in a project's action menu adds it to a Pinned section that stays
+fixed above Collections, just below the navigation bar, for the projects in
+focus right now. Pinned projects also stay in their usual place.
 
 Thread rows continue to use BB's own navigation and actions: unread state,
 pinning, rename, archive, delete confirmation, keyboard shortcuts, and split

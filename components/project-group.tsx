@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { ThreadList } from "@/components/thread-row";
+import { togglePinnedProject, usePinnedProjects } from "@/hooks/use-pinned-projects";
 import { rpcContract } from "@/contract";
 
 export const PROJECT_DRAG_TYPE = "application/x-bb-collections-project";
@@ -73,6 +74,7 @@ export function ProjectGroup({
   const actions = experimental_useSidebarThreadActions();
   const rpc = useRpc<typeof rpcContract>();
   const [expanded, setExpanded] = useState(initiallyExpanded);
+  const isPinned = usePinnedProjects().includes(project.id);
   const [renameOpen, setRenameOpen] = useState(false);
   const [confirmation, setConfirmation] = useState<ProjectConfirmation | null>(null);
   const [confirmationBusy, setConfirmationBusy] = useState(false);
@@ -131,6 +133,11 @@ export function ProjectGroup({
   const projectItems = useMemo(
     () => [
       {
+        id: "toggle-pin-project",
+        label: isPinned ? "Unpin project" : "Pin project",
+        onSelect: () => togglePinnedProject(project.id),
+      },
+      {
         id: "rename-project",
         label: "Rename project",
         onSelect: () => setRenameOpen(true),
@@ -156,7 +163,7 @@ export function ProjectGroup({
         },
       },
     ],
-    [project.id],
+    [isPinned, project.id],
   );
 
   const isClearConfirmation = confirmation === "clear-threads";
