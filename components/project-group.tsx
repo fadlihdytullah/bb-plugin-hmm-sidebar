@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type DragEvent } from "react";
+import { useMemo, useState, type DragEvent } from "react";
 import {
   experimental_useSidebarThreadActions,
   useRpc,
@@ -54,7 +54,6 @@ export function ProjectGroup({
   projectIndex,
   onMoveProject,
   onError,
-  expandedOverride,
 }: {
   project: PluginSidebarProject;
   threads: readonly PluginSidebarThread[];
@@ -69,7 +68,6 @@ export function ProjectGroup({
     position: number,
   ) => Promise<void>;
   onError: (cause: unknown) => void;
-  expandedOverride?: boolean;
 }) {
   const actions = experimental_useSidebarThreadActions();
   const rpc = useRpc<typeof rpcContract>();
@@ -81,9 +79,6 @@ export function ProjectGroup({
   const [confirmationError, setConfirmationError] = useState<string | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
   const [selectedThreadIds, setSelectedThreadIds] = useState<ReadonlySet<string>>(new Set());
-  useEffect(() => {
-    if (expandedOverride !== undefined) setExpanded(expandedOverride);
-  }, [expandedOverride]);
   const visibleThreads = useMemo(
     () => threads.filter((thread) => !thread.isArchived),
     [threads],

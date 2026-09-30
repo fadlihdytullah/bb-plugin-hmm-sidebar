@@ -594,8 +594,10 @@ describe("Hmm Sidebar app", () => {
 
     await slot.findByText("Active project chat");
     fireEvent.click(slot.getByRole("button", { name: "Collapse all projects" }));
-    expect(slot.queryByText("Active project chat")).toBeNull();
-    expect(slot.getByRole("button", { name: "Show all projects" })).toBeTruthy();
+    expect(slot.queryByText("With chat")).toBeNull();
+    expect(slot.queryByRole("list", { name: "Projects" })).toBeNull();
+    fireEvent.click(slot.getByRole("button", { name: "Show all projects" }));
+    expect(slot.getByText("With chat")).toBeTruthy();
 
     fireEvent.click(slot.getByRole("button", { name: "Sort and filter projects" }));
     fireEvent.click(slot.getByRole("menuitem", { name: "Only projects with chats" }));
@@ -668,15 +670,12 @@ describe("Hmm Sidebar app", () => {
 
     await slot.findByText("Build API");
     fireEvent.click(slot.getByRole("button", { name: "Collapse all collections" }));
-    expect(slot.queryByText("Build API")).toBeNull();
-    expect(slot.getByRole("button", { name: "Show all collections" })).toBeTruthy();
+    expect(slot.queryByText("Work")).toBeNull();
+    expect(slot.queryByRole("list", { name: "Collections" })).toBeNull();
 
     fireEvent.click(slot.getByRole("button", { name: "Show all collections" }));
+    expect(slot.getByText("Work")).toBeTruthy();
     expect(slot.getByText("Engineering")).toBeTruthy();
-    expect(slot.queryByText("Build API")).toBeNull();
-
-    fireEvent.click(slot.getByRole("button", { name: "Expand Engineering" }));
-    expect(slot.getByText("Build API")).toBeTruthy();
   });
 
   it("keeps an individual thread action menu above its row", async () => {

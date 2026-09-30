@@ -63,9 +63,8 @@ Cmd+Shift+Delete on macOS) opens BB's own delete confirmation for the current
 thread, or for the focused pane when a split is open.
 
 Collections are plugin-owned state. Create one with the folder-plus button or
-drag projects into it. The Collections header also includes a
-collapse/expand-all button beside New collection. Collection names and
-membership are shared across clients; collapsed state is kept per client.
+drag projects into it. Collection names and membership are shared across
+clients; a Collection's collapsed state is kept per client.
 Project action menus keep Rename project and Delete project, and Clear threads
 removes inactive threads while preserving running, attention, and error threads.
 The personal Chats header also provides Clear chats with the same protection. Both clear
@@ -82,9 +81,10 @@ Pinned projects also stay in their usual place. Pins are kept per client.
 Rows use a compact density: thread rows are 20px tall, project and Collection
 rows 24px, and their hover actions shrink to match. Projects with no threads
 show only their header, without a placeholder row. Click a Collection or project
-name to expand or collapse it, not just its icon. Section header actions
-(Collections, Projects, Chats) appear on hover or focus, and always on touch
-screens.
+name to expand or collapse it, not just its icon. Each section (Pinned,
+Collections, Projects, Chats) can be hidden or shown by clicking its title or
+its chevron; section header actions appear on hover or focus, and always on
+touch screens.
 
 The list stays muted so only what matters stands out: idle threads are dimmed,
 while the open thread and threads that are running or need attention (unread,

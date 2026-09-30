@@ -78,10 +78,12 @@ function CollectionsSidebar({
 }: CollectionsViewProps) {
   const { status, threads, projects } = experimental_useSidebarThreads();
   const collectionsState = useCollections();
-  const { isCollapsed, setAll, toggle } = useCollapsedCollections();
+  const { isCollapsed, toggle } = useCollapsedCollections();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [looseDropActive, setLooseDropActive] = useState(false);
+  const [pinnedExpanded, setPinnedExpanded] = useState(true);
+  const [collectionsExpanded, setCollectionsExpanded] = useState(true);
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [projectSort, setProjectSort] = useState<ProjectSort>("name-asc");
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>("all");
@@ -108,12 +110,6 @@ function CollectionsSidebar({
     ];
     return pinnedProjectIds.flatMap((id) => groups.find((entry) => entry.project.id === id) ?? []);
   }, [model, pinnedProjectIds]);
-  const collectionIds = useMemo(
-    () => model.collections.map(({ collection }) => collection.id),
-    [model.collections],
-  );
-  const allCollectionsCollapsed =
-    collectionIds.length > 0 && collectionIds.every(isCollapsed);
 
   const visibleLooseProjects = useMemo(() => {
     const filtered = model.looseProjects.filter((entry) => {
@@ -347,12 +343,34 @@ function CollectionsSidebar({
       onDragEnd={() => setLooseDropActive(false)}
     >
       {pinnedProjects.length > 0 ? (
-        <div className="shrink-0 border-b border-border/60 px-2 pb-1">
-          <div className="mb-1 px-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <div className="group/section shrink-0 border-b border-border/60 px-2 py-2">
+          <div className={`flex items-center justify-between px-1.5 ${pinnedExpanded ? "mb-1" : ""}`}>
+            <span
+              className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground"
+              onClick={() => setPinnedExpanded((current) => !current)}
+            >
               Pinned
             </span>
+            <div className={SECTION_ACTIONS_CLASS}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7 text-muted-foreground"
+                aria-label={pinnedExpanded ? "Collapse pinned projects" : "Show pinned projects"}
+                onClick={() => setPinnedExpanded((current) => !current)}
+              >
+                <Icon
+                  name="ChevronDown"
+                  className={`size-4 transition-transform motion-reduce:transition-none ${
+                    pinnedExpanded ? "rotate-180" : ""
+                  }`}
+                  aria-hidden="true"
+                />
+              </Button>
+            </div>
           </div>
+          {pinnedExpanded ? (
           <ul className="space-y-px" aria-label="Pinned projects">
             {pinnedProjects.map((entry, index) => (
               <ProjectGroup
@@ -369,12 +387,16 @@ function CollectionsSidebar({
               />
             ))}
           </ul>
+          ) : null}
         </div>
       ) : null}
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1">
-      <div className="group/section">
-      <div className="mb-1 flex items-center justify-between px-1.5">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2">
+      <div className={`group/section pt-2 ${collectionsExpanded ? "pb-3" : "pb-2"}`}>
+      <div className={`flex items-center justify-between px-1.5 ${collectionsExpanded ? "mb-1" : ""}`}>
+        <span
+          className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground"
+          onClick={() => setCollectionsExpanded((current) => !current)}
+        >
           Collections
         </span>
         <div className={SECTION_ACTIONS_CLASS}>
@@ -383,17 +405,13 @@ function CollectionsSidebar({
             variant="ghost"
             size="icon"
             className="size-7 text-muted-foreground"
-            aria-label={
-              allCollectionsCollapsed
-                ? "Show all collections"
-                : "Collapse all collections"
-            }
-            onClick={() => setAll(collectionIds, !allCollectionsCollapsed)}
+            aria-label={collectionsExpanded ? "Collapse all collections" : "Show all collections"}
+            onClick={() => setCollectionsExpanded((current) => !current)}
           >
             <Icon
               name="ChevronDown"
               className={`size-4 transition-transform motion-reduce:transition-none ${
-                allCollectionsCollapsed ? "" : "rotate-180"
+                collectionsExpanded ? "rotate-180" : ""
               }`}
               aria-hidden="true"
             />
@@ -439,6 +457,7 @@ function CollectionsSidebar({
 
       {status === "ready" && !collectionsState.isLoading ? (
         <>
+          {collectionsExpanded ? (
           <ul className="space-y-px" aria-label="Collections">
             {model.collections.map(({ collection, projects: collectionProjects }, index) => (
               <CollectionRow
@@ -458,8 +477,9 @@ function CollectionsSidebar({
               />
             ))}
           </ul>
+          ) : null}
 
-          {model.collections.length === 0 ? (
+          {collectionsExpanded && model.collections.length === 0 ? (
             <div className="mx-1.5 rounded-md border border-dashed border-border/70 px-3 py-4 text-center">
               <p className="text-[11px] text-muted-foreground">
                 No collections yet
@@ -481,7 +501,9 @@ function CollectionsSidebar({
         <>
 
           <div
-            className={`group/section mt-3 border-t border-border/60 pt-2 ${
+            className={`group/section -mx-2 border-t border-border/60 px-2 pt-2 ${
+              projectsExpanded ? "pb-3" : "pb-2"
+            } ${
               looseDropActive ? "rounded-md bg-sidebar-accent/50" : ""
             }`}
             data-loose-projects-drop-target=""
@@ -499,8 +521,11 @@ function CollectionsSidebar({
             }}
             onDrop={handleLooseDrop}
           >
-            <div className="group mb-1 flex items-center justify-between px-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <div className={`group flex items-center justify-between px-1.5 ${projectsExpanded ? "mb-1" : ""}`}>
+              <span
+                className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground"
+                onClick={() => setProjectsExpanded((current) => !current)}
+              >
                 Projects
               </span>
               <div className={SECTION_ACTIONS_CLASS}>
@@ -530,7 +555,7 @@ function CollectionsSidebar({
               </div>
             </div>
 
-            {visibleLooseProjects.length > 0 ? (
+            {!projectsExpanded ? null : visibleLooseProjects.length > 0 ? (
               <ul className="space-y-px" aria-label="Projects">
                 {visibleLooseProjects.map((entry, index) => (
                   <ProjectGroup
@@ -543,7 +568,6 @@ function CollectionsSidebar({
                     projectIndex={index}
                     onMoveProject={moveProject}
                     onError={reportError}
-                    expandedOverride={projectsExpanded}
                   />
                 ))}
               </ul>
@@ -557,9 +581,12 @@ function CollectionsSidebar({
           </div>
 
           {model.personalProject !== null ? (
-            <div className="group/section mt-3 border-t border-border/60 pt-2">
-              <div className="mb-1 flex items-center justify-between px-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <div className={`group/section -mx-2 border-t border-border/60 px-2 pt-2 ${chatsExpanded ? "pb-3" : "pb-2"}`}>
+              <div className={`flex items-center justify-between px-1.5 ${chatsExpanded ? "mb-1" : ""}`}>
+                <span
+                  className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground"
+                  onClick={() => setChatsExpanded((current) => !current)}
+                >
                   Chats
                 </span>
                 <div className={SECTION_ACTIONS_CLASS}>
