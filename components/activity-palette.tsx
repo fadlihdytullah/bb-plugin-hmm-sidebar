@@ -11,6 +11,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CompactViewportOverrideProvider } from "@/components/ui/hooks/use-compact-viewport";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
@@ -174,6 +175,8 @@ export function ActivityPalette() {
   const isChatScoped = chatContainer !== null && portalHost !== null;
   const palette =
     chatContainer !== null && portalHost === null ? null : (
+      // Bottom sheets sit off-screen in a narrow window; always centre like cmd+k.
+      <CompactViewportOverrideProvider isCompactViewport={false}>
       <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         data-testid="activity-palette"
@@ -292,6 +295,7 @@ export function ActivityPalette() {
         </div>
       </DialogContent>
       </Dialog>
+      </CompactViewportOverrideProvider>
     );
 
   if (chatContainer === null) return palette;

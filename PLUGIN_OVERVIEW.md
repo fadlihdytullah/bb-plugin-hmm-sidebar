@@ -43,7 +43,8 @@ results, **Enter** opens the selected thread, and **Cmd+Enter** opens a split.
 Recents always lists up to five threads, and each row shows a status dot, the
 title, and a project badge.
 The palette is centered horizontally at 15% from the top of BB's main chat
-container.
+container, and stays a centered dialog on narrow windows instead of becoming a
+bottom drawer. The new-thread-in-split dialog behaves the same way.
 
 **Hmm Sidebar: New thread in split** in the command palette (**Cmd+Shift+P**)
 opens BB's full new-thread composer in a dialog and opens the started thread in

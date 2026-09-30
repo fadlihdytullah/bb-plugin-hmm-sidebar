@@ -14,6 +14,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CompactViewportOverrideProvider } from "@/components/ui/hooks/use-compact-viewport";
 import { rpcContract } from "@/contract";
 
 export const OPEN_SPLIT_COMPOSER_EVENT = "hmm-sidebar:new-thread-split";
@@ -62,6 +63,8 @@ export function SplitThreadComposer() {
   };
 
   return (
+    // Bottom sheets sit off-screen in a narrow window; always centre like cmd+k.
+    <CompactViewportOverrideProvider isCompactViewport={false}>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent data-testid="split-thread-composer" className="max-w-2xl">
         <DialogTitle>New thread in split</DialogTitle>
@@ -77,5 +80,6 @@ export function SplitThreadComposer() {
         />
       </DialogContent>
     </Dialog>
+    </CompactViewportOverrideProvider>
   );
 }
