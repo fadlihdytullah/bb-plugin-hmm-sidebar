@@ -6,6 +6,7 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
 import { forgetRecent, rememberRecent, useRecents } from "@/hooks/use-recents";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import {
   activityTimestamp,
@@ -247,35 +248,40 @@ export function ActivityPanel({
   return (
     <section
       aria-label="Sidebar activity"
-      className={`sticky bottom-0 z-10 shrink-0 border-t border-border/70 bg-sidebar px-2 pt-3 ${
+      className={`group/section sticky bottom-0 z-10 shrink-0 border-t border-border/70 bg-sidebar px-2 pt-3 ${
         expanded ? "pb-2" : "border-b pb-3"
       }`}
     >
-      <button
-        type="button"
-        aria-expanded={expanded}
-        aria-label={`${expanded ? "Hide" : "Show"} Activity`}
+      <div
+        className={`flex cursor-pointer items-center justify-between px-1.5 ${expanded ? "mb-1" : ""}`}
         onClick={toggleExpanded}
-        className={`flex w-full items-center justify-between rounded px-2 text-muted-foreground hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-          expanded ? "mb-1" : ""
-        }`}
       >
-        <span className="flex items-center gap-1">
-          <Icon
-            name="ChevronDown"
-            className={`size-3.5 transition-transform motion-reduce:transition-none ${
-              expanded ? "" : "-rotate-90"
-            }`}
-            aria-hidden="true"
-          />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">
-            Activity
-          </span>
+        <span className="select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
+          Activity
         </span>
-        <span className="text-[10px] tabular-nums">
-          {activityThreads.length}
-        </span>
-      </button>
+        <div
+          className="flex items-center opacity-0 transition-opacity group-hover/section:opacity-100 group-focus-within/section:opacity-100 pointer-coarse:opacity-100 motion-reduce:transition-none"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground"
+            aria-expanded={expanded}
+            aria-label={`${expanded ? "Hide" : "Show"} Activity`}
+            onClick={toggleExpanded}
+          >
+            <Icon
+              name="ChevronDown"
+              className={`size-4 transition-transform motion-reduce:transition-none ${
+                expanded ? "rotate-180" : ""
+              }`}
+              aria-hidden="true"
+            />
+          </Button>
+        </div>
+      </div>
       {expanded ? (
       <>
       <div className="max-h-52 overflow-y-auto rounded-lg border border-border/70 bg-sidebar-accent/20 p-1">

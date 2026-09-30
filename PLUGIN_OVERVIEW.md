@@ -9,8 +9,8 @@ have not been filed remain in the same flat list shape as BB's native sidebar.
 
 Create, rename, reorder, collapse, and delete Collections without changing BB
 projects themselves. Each Collection can be toggled individually, and every
-section (Pinned, Collections, Projects, Chats) can be hidden or shown from its
-title or chevron. Drag a project onto a Collection to move it. Project action menus
+section (Pinned, Collections, Projects, Chats) can be hidden or shown by clicking
+its header. Drag a project onto a Collection to move it. Project action menus
 keep Rename project and Delete project, plus Clear threads for removing
 inactive threads while preserving running, attention, and error threads.
 The personal Chats header also provides Clear chats with the same protection. Both clear
@@ -35,7 +35,8 @@ database and updates are broadcast to other open clients.
 The sidebar also keeps the Active Chats activity panel visible. Working chats
 appear automatically, while pinned chats remain visible after becoming idle.
 BB's native pin state is respected and can be toggled from Activity or Recents.
-The Activity section can be collapsed from its header, and the choice persists.
+The Activity section can be collapsed by clicking its header, with its chevron
+shown on hover, and the choice persists.
 The same Activity view is available as a floating palette with **Cmd+E**;
 search matches thread titles and project names, arrow keys move through the
 results, **Enter** opens the selected thread, and **Cmd+Enter** opens a split.

@@ -344,14 +344,14 @@ function CollectionsSidebar({
     >
       {pinnedProjects.length > 0 ? (
         <div className="group/section shrink-0 border-b border-border/60 px-2 py-2">
-          <div className={`flex items-center justify-between px-1.5 ${pinnedExpanded ? "mb-1" : ""}`}>
-            <span
-              className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground"
-              onClick={() => setPinnedExpanded((current) => !current)}
-            >
+          <div
+            className={`flex cursor-pointer items-center justify-between px-1.5 ${pinnedExpanded ? "mb-1" : ""}`}
+            onClick={() => setPinnedExpanded((current) => !current)}
+          >
+            <span className="select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
               Pinned
             </span>
-            <div className={SECTION_ACTIONS_CLASS}>
+            <div className={SECTION_ACTIONS_CLASS} onClick={(event) => event.stopPropagation()}>
               <Button
                 type="button"
                 variant="ghost"
@@ -392,14 +392,14 @@ function CollectionsSidebar({
       ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto px-2">
       <div className={`group/section pt-2 ${collectionsExpanded ? "pb-3" : "pb-2"}`}>
-      <div className={`flex items-center justify-between px-1.5 ${collectionsExpanded ? "mb-1" : ""}`}>
-        <span
-          className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground"
-          onClick={() => setCollectionsExpanded((current) => !current)}
-        >
+      <div
+        className={`flex cursor-pointer items-center justify-between px-1.5 ${collectionsExpanded ? "mb-1" : ""}`}
+        onClick={() => setCollectionsExpanded((current) => !current)}
+      >
+        <span className="select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
           Collections
         </span>
-        <div className={SECTION_ACTIONS_CLASS}>
+        <div className={SECTION_ACTIONS_CLASS} onClick={(event) => event.stopPropagation()}>
           <Button
             type="button"
             variant="ghost"
@@ -521,14 +521,14 @@ function CollectionsSidebar({
             }}
             onDrop={handleLooseDrop}
           >
-            <div className={`group flex items-center justify-between px-1.5 ${projectsExpanded ? "mb-1" : ""}`}>
-              <span
-                className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground"
-                onClick={() => setProjectsExpanded((current) => !current)}
-              >
+            <div
+              className={`group flex cursor-pointer items-center justify-between px-1.5 ${projectsExpanded ? "mb-1" : ""}`}
+              onClick={() => setProjectsExpanded((current) => !current)}
+            >
+              <span className="select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
                 Projects
               </span>
-              <div className={SECTION_ACTIONS_CLASS}>
+              <div className={SECTION_ACTIONS_CLASS} onClick={(event) => event.stopPropagation()}>
                 <Button
                   type="button"
                   variant="ghost"
@@ -582,14 +582,14 @@ function CollectionsSidebar({
 
           {model.personalProject !== null ? (
             <div className={`group/section -mx-2 border-t border-border/60 px-2 pt-2 ${chatsExpanded ? "pb-3" : "pb-2"}`}>
-              <div className={`flex items-center justify-between px-1.5 ${chatsExpanded ? "mb-1" : ""}`}>
-                <span
-                  className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground"
-                  onClick={() => setChatsExpanded((current) => !current)}
-                >
+              <div
+                className={`flex cursor-pointer items-center justify-between px-1.5 ${chatsExpanded ? "mb-1" : ""}`}
+                onClick={() => setChatsExpanded((current) => !current)}
+              >
+                <span className="select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
                   Chats
                 </span>
-                <div className={SECTION_ACTIONS_CLASS}>
+                <div className={SECTION_ACTIONS_CLASS} onClick={(event) => event.stopPropagation()}>
                   <Button
                     type="button"
                     variant="ghost"

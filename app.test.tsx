@@ -923,7 +923,6 @@ describe("Hmm Sidebar app", () => {
 
     const activity = await slot.findByRole("region", { name: "Sidebar activity" });
     expect(within(activity).getByText("Idle chat")).toBeTruthy();
-    expect(within(activity).getByText("1")).toBeTruthy();
     fireEvent.click(
       within(activity).getByRole("button", { name: "Unpin Idle chat in Activity" }),
     );
@@ -950,7 +949,6 @@ describe("Hmm Sidebar app", () => {
     const activity = await slot.findByRole("region", { name: "Sidebar activity" });
     fireEvent.click(within(activity).getByRole("button", { name: "Hide Activity" }));
     expect(within(activity).queryByText("Build API")).toBeNull();
-    expect(within(activity).getByText("1")).toBeTruthy();
 
     cleanup();
     const again = renderSlot(threadList, listProps, options);

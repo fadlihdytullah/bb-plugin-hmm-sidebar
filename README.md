@@ -40,8 +40,9 @@ New thread and Search threads remain checked at all times.
 
 Active chats continue to appear automatically while agents are working or
 need attention. Pin a chat anywhere in BB—or directly from Activity or
-Recents—to keep it in Activity while it is idle. Click the **Activity** header
-to hide or show the section; the choice is remembered per BB client.
+Recents—to keep it in Activity while it is idle. Click anywhere on the **Activity**
+header (or its hover chevron) to hide or show the section; the choice is
+remembered per BB client.
 
 Press **Cmd+E** to open the floating Activity palette from anywhere in BB.
 Search by thread title or project, move through Currently active, Needs
@@ -82,9 +83,9 @@ Rows use a compact density: thread rows are 20px tall, project and Collection
 rows 24px, and their hover actions shrink to match. Projects with no threads
 show only their header, without a placeholder row. Click a Collection or project
 name to expand or collapse it, not just its icon. Each section (Pinned,
-Collections, Projects, Chats) can be hidden or shown by clicking its title or
-its chevron; section header actions appear on hover or focus, and always on
-touch screens.
+Collections, Projects, Chats, Activity) can be hidden or shown by clicking
+anywhere on its header; section header actions appear on hover or focus, and
+always on touch screens.
 
 The list stays muted so only what matters stands out: idle threads are dimmed,
 while the open thread and threads that are running or need attention (unread,
