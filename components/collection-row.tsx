@@ -140,9 +140,6 @@ export function CollectionRow({
         >
           {collection.name}
         </span>
-        <span className="tabular-nums text-[10px] font-normal text-muted-foreground">
-          {projects.length}
-        </span>
         <ActionMenu
           label={`Actions for ${collection.name}`}
           triggerClassName="size-5"
