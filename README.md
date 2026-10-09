@@ -47,8 +47,8 @@ remembered per BB client.
 Press **Cmd+E** to open the floating Activity palette from anywhere in BB.
 Search by thread title or project, move through Currently active, Needs
 attention, Pinned, and Recents with the arrow keys, press **Enter** to open a
-thread, or **Cmd+Enter** to open it in a split. Recents always lists up to five
-threads: ones opened from Activity first, then the most recently active. Each
+thread, or **Cmd+Enter** to open it in a split. Recents lists the five most
+recently active threads, including ones outside any project. Each
 row shows a status dot, the thread title, and a project badge on the right. The
 palette is centered horizontally at 15% from the top of BB's main chat
 container, and stays a centered dialog on narrow windows instead of becoming a

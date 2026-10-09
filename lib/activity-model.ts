@@ -149,7 +149,6 @@ export function isCurrentlyActive(thread: PluginSidebarThread): boolean {
 export function buildActivityPaletteGroups(
   threads: readonly PluginSidebarThread[],
   projects: readonly PluginSidebarProject[],
-  recentIds: readonly string[],
   query = "",
 ): readonly ActivityPaletteGroup[] {
   const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -183,20 +182,7 @@ export function buildActivityPaletteGroups(
   const needsAttention = take(isNeedsAttention);
   const currentlyActive = take(isCurrentlyActive);
   const pinned = take((thread) => thread.isPinned);
-  // Threads opened from Activity come first, then the most recently active
-  // threads fill the group so it is useful before anything has been opened.
-  const remembered = candidates
-    .filter(({ thread }) => !used.has(thread.id) && recentIds.includes(thread.id))
-    .sort(
-      (left, right) =>
-        recentIds.indexOf(right.thread.id) - recentIds.indexOf(left.thread.id),
-    );
-  const recents = [
-    ...remembered,
-    ...candidates
-      .filter(({ thread }) => !used.has(thread.id) && !recentIds.includes(thread.id))
-      .sort(compareActivity),
-  ].slice(0, RECENTS_LIMIT);
+  const recents = take(() => true).slice(0, RECENTS_LIMIT);
 
   const groups: ActivityPaletteGroup[] = [
     { id: "needs-attention", label: "Needs attention", icon: "AlertCircle", entries: needsAttention },

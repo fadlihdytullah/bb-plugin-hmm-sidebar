@@ -15,7 +15,7 @@ import { CompactViewportOverrideProvider } from "@/components/ui/hooks/use-compa
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
-import { rememberRecent, useRecents } from "@/hooks/use-recents";
+import { rememberRecent } from "@/hooks/use-recents";
 import { usePortalScopeProps } from "@/lib/portal-scope";
 import {
   buildActivityPaletteGroups,
@@ -75,7 +75,6 @@ export function ActivityPalette() {
   const { threadId: activeThreadId } = useBbContext();
   const { status, threads, projects } = experimental_useSidebarThreads();
   const actions = experimental_useSidebarThreadActions();
-  const recentIds = useRecents();
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -92,8 +91,8 @@ export function ActivityPalette() {
   const portalScopeProps = usePortalScopeProps();
 
   const groups = useMemo(
-    () => buildActivityPaletteGroups(threads, projects, recentIds, query),
-    [projects, query, recentIds, threads],
+    () => buildActivityPaletteGroups(threads, projects, query),
+    [projects, query, threads],
   );
   const visibleEntries = useMemo(
     () => groups.flatMap((group) => group.entries),

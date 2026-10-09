@@ -73,7 +73,6 @@ describe("activity palette model", () => {
         thread("archived", "engineering", { isArchived: true }),
       ],
       projects,
-      ["recent"],
     );
 
     expect(groups.map(({ label }) => label)).toEqual([
@@ -94,16 +93,15 @@ describe("activity palette model", () => {
     const groups = buildActivityPaletteGroups(
       [1, 2, 3, 4, 5, 6].map((n) => thread(`t${n}`, "personal", { updatedAt: n })),
       projects,
-      ["t1"],
     );
 
     expect(groups.map(({ label }) => label)).toEqual(["Recents"]);
     expect(groups[0]!.entries.map(({ thread: value }) => value.id)).toEqual([
-      "t1",
       "t6",
       "t5",
       "t4",
       "t3",
+      "t2",
     ]);
   });
 
@@ -115,7 +113,6 @@ describe("activity palette model", () => {
         thread("Archived API", "engineering", { isArchived: true }),
       ],
       projects,
-      [],
       "engineering",
     );
 
