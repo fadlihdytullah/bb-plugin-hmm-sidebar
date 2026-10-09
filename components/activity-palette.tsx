@@ -12,7 +12,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CompactViewportOverrideProvider } from "@/components/ui/hooks/use-compact-viewport";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
 import { rememberRecent } from "@/hooks/use-recents";
@@ -43,10 +42,8 @@ function ActivityPaletteRow({
       role="option"
       aria-selected={selected}
       aria-label={`${title}, ${entry.project}, ${entry.status.label}`}
-      className={`flex w-full min-w-0 items-center gap-3 rounded-md px-3 py-2 text-left transition-colors motion-reduce:transition-none ${
-        selected
-          ? "bg-state-active text-foreground"
-          : "text-foreground hover:bg-state-hover"
+      className={`flex h-8 w-full min-w-0 items-center gap-2.5 rounded-md px-2 text-left text-foreground transition-colors motion-reduce:transition-none ${
+        selected ? "bg-state-active" : "hover:bg-state-hover"
       }`}
       onMouseEnter={onSelect}
       onClick={() => onOpen(entry.thread.id, false)}
@@ -54,19 +51,16 @@ function ActivityPaletteRow({
       <span
         aria-hidden="true"
         title={entry.status.label}
-        className="flex size-4 shrink-0 items-center justify-center"
+        className="flex size-3 shrink-0 items-center justify-center"
       >
         <span className={`size-1.5 rounded-full ${entry.status.dotClassName}`} />
       </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium leading-5">
+      <span className="min-w-0 flex-1 truncate text-[13px] leading-5">
         {title}
       </span>
-      <Badge
-        variant="secondary"
-        className="max-w-[40%] shrink-0 px-1.5 py-0 text-[11px] font-medium"
-      >
-        <span className="truncate">{entry.project}</span>
-      </Badge>
+      <span className="max-w-[35%] shrink-0 truncate text-xs text-muted-foreground">
+        {entry.project}
+      </span>
     </button>
   );
 }
@@ -179,7 +173,7 @@ export function ActivityPalette() {
       <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         data-testid="activity-palette"
-        className={`max-w-xl gap-0 overflow-hidden p-0 ${
+        className={`max-w-lg gap-0 overflow-hidden p-0 ${
           isChatScoped ? "!absolute !top-[15%] !translate-y-0" : ""
         }`}
         hideCloseButton
@@ -195,7 +189,7 @@ export function ActivityPalette() {
         <DialogDescription className="sr-only">
           Search and open active BB threads.
         </DialogDescription>
-        <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+        <div className="flex h-11 items-center gap-2 border-b border-border px-3">
           <Icon name="Search" className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <Input
             ref={inputRef}
@@ -226,18 +220,17 @@ export function ActivityPalette() {
             role="combobox"
             aria-expanded="true"
             placeholder="Search Activity by title or project"
-            className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
+            className="h-full border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
           />
-          <kbd className="hidden shrink-0 items-center rounded border border-border bg-muted px-1.5 py-1 text-xs font-medium leading-none tracking-[0.2em] text-muted-foreground sm:inline-flex">
-            {/* Mac modifier glyphs render tiny next to letters at the same size. */}
-            <span className="text-base">⌘</span>E
+          <kbd className="hidden shrink-0 rounded border border-border px-1 py-0.5 text-[10px] leading-none text-muted-foreground sm:inline-block">
+            esc
           </kbd>
         </div>
         <div
           id="activity-palette-results"
           role="listbox"
           aria-label="Activity results"
-          className="max-h-[min(60vh,28rem)] overflow-y-auto p-2"
+          className="max-h-[min(60vh,24rem)] overflow-y-auto p-1.5"
         >
           {status === "loading" ? (
             <p role="status" className="px-3 py-6 text-center text-sm text-muted-foreground">
@@ -261,15 +254,15 @@ export function ActivityPalette() {
                   key={group.id}
                   role="group"
                   aria-labelledby={headingId}
-                  className="not-first:mt-2"
+                  className="not-first:mt-1.5"
                 >
                   <div
                     id={headingId}
-                    className="flex items-center gap-1.5 px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+                    className="flex items-center gap-1.5 px-2 pb-1 pt-1.5 text-[11px] font-medium text-muted-foreground"
                   >
                     <Icon name={group.icon} className="size-3" aria-hidden="true" />
                     {group.label}
-                    <span aria-hidden="true" className="ml-auto tabular-nums font-normal">
+                    <span aria-hidden="true" className="ml-auto tabular-nums opacity-60">
                       {group.entries.length}
                     </span>
                   </div>
@@ -287,10 +280,17 @@ export function ActivityPalette() {
             })
           )}
         </div>
-        <div className="flex items-center justify-end gap-3 border-t border-border px-4 py-2 text-[10px] text-muted-foreground">
-          <span>↑↓ Navigate</span>
-          <span>↵ Open</span>
-          <span>⌘↵ Split</span>
+        <div className="flex h-8 items-center justify-end gap-3 border-t border-border px-3 text-[11px] text-muted-foreground">
+          {[
+            ["↑↓", "Navigate"],
+            ["↵", "Open"],
+            ["⌘↵", "Split"],
+          ].map(([keys, label]) => (
+            <span key={label} className="flex items-center gap-1">
+              <kbd className="rounded border border-border px-1 font-sans leading-4">{keys}</kbd>
+              {label}
+            </span>
+          ))}
         </div>
       </DialogContent>
       </Dialog>
