@@ -1,16 +1,17 @@
-import { useState } from "react";
 import {
-  experimental_useSidebarThreadActions,
+  experimental_ThreadActionsContextMenu as ThreadActionsContextMenu,
+  experimental_ThreadActionsMenu as ThreadActionsMenu,
   experimental_useSidebarThreadSplit,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
-import { toast } from "sonner";
-import { ActionMenu } from "@/components/action-menu";
 import { ShowMoreButton, useShowMore } from "@/components/show-more";
-import { NameDialog } from "@/components/name-dialog";
 import { Icon } from "@/components/ui/icon";
+import { useThreadCommands } from "@/hooks/use-thread-commands";
 import { isCurrentlyActive, isNeedsAttention } from "@/lib/activity-model";
 import { threadTitle } from "@/lib/sidebar-model";
+import { requestThreadDelete } from "@/lib/thread-delete";
+import { toThreadActionTarget } from "@/lib/thread-target";
+import { cn } from "@/lib/utils";
 
 function indicatorClass(thread: PluginSidebarThread): string {
   switch (thread.indicator) {
@@ -52,12 +53,14 @@ export function ThreadList({
   onNavigate,
   label,
   className,
+  shortcutTargets = true,
 }: {
   threads: readonly PluginSidebarThread[];
   activeThreadId: string | null;
   onNavigate: () => void;
   label?: string;
   className?: string;
+  shortcutTargets?: boolean;
 }) {
   const { shown, hiddenCount, expanded, canToggle, toggle } = useShowMore(
     threads,
@@ -80,6 +83,7 @@ export function ThreadList({
             thread={thread}
             activeThreadId={activeThreadId}
             onNavigate={onNavigate}
+            shortcutTarget={shortcutTargets}
           />
         ))}
       </ul>
@@ -94,57 +98,55 @@ export function ThreadRow({
   thread,
   activeThreadId,
   onNavigate,
+  shortcutTarget = true,
 }: {
   thread: PluginSidebarThread;
   activeThreadId: string | null;
   onNavigate: () => void;
+  shortcutTarget?: boolean;
 }) {
-  const actions = experimental_useSidebarThreadActions();
+  const commands = useThreadCommands();
   const { splitProps } = experimental_useSidebarThreadSplit(thread.id);
-  const [renameOpen, setRenameOpen] = useState(false);
   const title = threadTitle(thread);
+  const target = toThreadActionTarget(thread);
   const isActive = thread.id === activeThreadId;
   const isHighlighted = isThreadHighlighted(thread);
 
-  const reportError = (cause: unknown) => {
-    toast.error("Could not update thread", {
-      description: cause instanceof Error ? cause.message : String(cause),
-    });
-  };
-
   return (
     <li className="group/thread relative list-none">
-      <a
-        {...splitProps}
-        data-sidebar-thread-shortcut-target=""
-        data-sidebar-thread-id={thread.id}
-        href="#"
-        aria-current={isActive ? "page" : undefined}
-        aria-label={`${title}${thread.indicatorLabel ? `, ${thread.indicatorLabel}` : ""}`}
-        className={`flex min-w-0 items-center gap-2 rounded-md px-2 py-0.5 pr-12 text-xs transition-colors motion-reduce:transition-none ${
-          isActive
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : isHighlighted
-              ? "text-sidebar-foreground hover:bg-sidebar-accent/70"
-              : "text-muted-foreground/30 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
-        }`}
-        onClick={(event) => {
-          event.preventDefault();
-          actions.open(thread.id, { split: false });
-          onNavigate();
-        }}
-      >
-        <span
-          aria-hidden="true"
-          className={`size-1.5 shrink-0 rounded-full ${indicatorClass(thread)}`}
-        />
-        <span className="min-w-0 flex-1 truncate font-normal leading-4">
-          {title}
-        </span>
-        {thread.isUnread ? (
-          <span className="sr-only">Unread</span>
-        ) : null}
-      </a>
+      <ThreadActionsContextMenu thread={target}>
+        <a
+          {...splitProps}
+          data-sidebar-thread-shortcut-target={shortcutTarget ? "" : undefined}
+          data-sidebar-thread-id={thread.id}
+          href={thread.href.length > 0 ? thread.href : "#"}
+          aria-current={isActive ? "page" : undefined}
+          aria-label={`${title}${thread.indicatorLabel ? `, ${thread.indicatorLabel}` : ""}`}
+          className={`flex min-w-0 items-center gap-2 rounded-md px-2 py-0.5 pr-12 text-xs transition-colors motion-reduce:transition-none ${
+            isActive
+              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+              : isHighlighted
+                ? "text-sidebar-foreground hover:bg-sidebar-accent/70"
+                : "text-muted-foreground/30 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+          }`}
+          onClick={(event) => {
+            event.preventDefault();
+            commands.open(thread.id, { split: false });
+            onNavigate();
+          }}
+        >
+          <span
+            aria-hidden="true"
+            className={`size-1.5 shrink-0 rounded-full ${indicatorClass(thread)}`}
+          />
+          <span className="min-w-0 flex-1 truncate font-normal leading-4">
+            {title}
+          </span>
+          {thread.isUnread ? (
+            <span className="sr-only">Unread</span>
+          ) : null}
+        </a>
+      </ThreadActionsContextMenu>
       <div className="pointer-events-auto absolute bottom-0 right-1 top-0 flex items-center">
         <button
           type="button"
@@ -152,59 +154,30 @@ export function ThreadRow({
           className="pointer-events-none flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/thread:pointer-events-auto group-hover/thread:opacity-100 group-focus-within/thread:pointer-events-auto group-focus-within/thread:opacity-100 motion-reduce:transition-none"
           onClick={(event) => {
             event.preventDefault();
-            actions.requestDelete(thread.id);
+            requestThreadDelete(thread.id);
           }}
         >
           <Icon name="Trash2" className="size-3.5" aria-hidden="true" />
         </button>
-        <ActionMenu
-          label={`Actions for ${title}`}
-          triggerClassName="size-5 group-hover/thread:opacity-100 group-focus-within/thread:opacity-100"
-          items={[
-            {
-              id: "pin",
-              label: thread.isPinned ? "Unpin thread" : "Pin thread",
-              onSelect: () => {
-                void actions.setPinned(thread.id, !thread.isPinned).catch(reportError);
-              },
-            },
-            {
-              id: "read",
-              label: thread.isUnread ? "Mark as read" : "Mark as unread",
-              onSelect: () => {
-                void actions.setRead(thread.id, thread.isUnread).catch(reportError);
-              },
-            },
-            {
-              id: "rename",
-              label: "Rename thread",
-              onSelect: () => setRenameOpen(true),
-            },
-            {
-              id: "archive",
-              label: "Archive thread",
-              onSelect: () => actions.archive(thread.id),
-            },
-            {
-              id: "delete",
-              label: "Delete thread",
-              destructive: true,
-              onSelect: () => actions.requestDelete(thread.id),
-            },
-          ]}
-        >
-          <Icon name="MoreHorizontal" className="size-4" aria-hidden="true" />
-        </ActionMenu>
+        <ThreadActionsMenu
+          thread={target}
+          side="bottom"
+          align="end"
+          trigger={(props) => (
+            <button
+              {...props}
+              type="button"
+              aria-label={`Actions for ${title}`}
+              className={cn(
+                "flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-state-hover hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/thread:opacity-100 group-focus-within/thread:opacity-100 aria-expanded:bg-state-active aria-expanded:text-foreground aria-expanded:opacity-100",
+                props.className,
+              )}
+            >
+              <Icon name="MoreHorizontal" className="size-4" aria-hidden="true" />
+            </button>
+          )}
+        />
       </div>
-      <NameDialog
-        open={renameOpen}
-        title="Rename thread"
-        initialName={title}
-        onOpenChange={setRenameOpen}
-        onSubmit={async (nextTitle) => {
-          if (nextTitle !== title) await actions.rename(thread.id, nextTitle);
-        }}
-      />
     </li>
   );
 }

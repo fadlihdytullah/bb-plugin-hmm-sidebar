@@ -109,6 +109,10 @@ export const rpcContract = defineRpcContract({
     input: z.object({ request: newThreadRequestSchema }).strict(),
     output: z.object({ threadId: z.string() }).strict(),
   },
+  threads_set_pinned: {
+    input: z.object({ threadId: z.string().trim().min(1).max(500), pinned: z.boolean() }).strict(),
+    output: z.object({ ok: z.literal(true) }).strict(),
+  },
 });
 
 export type Collection = z.infer<typeof collectionSchema>;

@@ -146,14 +146,54 @@ export function isCurrentlyActive(thread: PluginSidebarThread): boolean {
   return RUNNING_INDICATORS.has(thread.indicator) || hasLiveActivity(thread);
 }
 
+export type ActivityPaletteFilter = "all" | "unread" | "pinned" | "running";
+export type ActivityPaletteSort = "recent" | "name";
+
+export const ACTIVITY_PALETTE_FILTERS: readonly {
+  id: ActivityPaletteFilter;
+  label: string;
+}[] = [
+  { id: "all", label: "All" },
+  { id: "unread", label: "Unread" },
+  { id: "pinned", label: "Pinned" },
+  { id: "running", label: "Running" },
+];
+
+const PALETTE_FILTER_PREDICATES: Record<
+  ActivityPaletteFilter,
+  (thread: PluginSidebarThread) => boolean
+> = {
+  all: () => true,
+  unread: (thread) => thread.isUnread,
+  pinned: (thread) => thread.isPinned,
+  running: isCurrentlyActive,
+};
+
+function compareName(
+  left: ActivityPaletteEntry,
+  right: ActivityPaletteEntry,
+): number {
+  return (
+    threadTitle(left.thread).localeCompare(threadTitle(right.thread), undefined, {
+      sensitivity: "base",
+    }) || left.thread.id.localeCompare(right.thread.id)
+  );
+}
+
 export function buildActivityPaletteGroups(
   threads: readonly PluginSidebarThread[],
   projects: readonly PluginSidebarProject[],
   query = "",
+  options: {
+    filter?: ActivityPaletteFilter;
+    sort?: ActivityPaletteSort;
+  } = {},
 ): readonly ActivityPaletteGroup[] {
   const normalizedQuery = query.trim().toLocaleLowerCase();
+  const matchesFilter = PALETTE_FILTER_PREDICATES[options.filter ?? "all"];
+  const compare = options.sort === "name" ? compareName : compareActivity;
   const candidates = threads
-    .filter((thread) => !thread.isArchived)
+    .filter((thread) => !thread.isArchived && matchesFilter(thread))
     .map((thread) => ({
       thread,
       project: projectName(thread, projects),
@@ -174,7 +214,7 @@ export function buildActivityPaletteGroups(
     const entries = candidates.filter(
       ({ thread }) => !used.has(thread.id) && predicate(thread),
     );
-    if (sort) entries.sort(compareActivity);
+    if (sort) entries.sort(compare);
     entries.forEach(({ thread }) => used.add(thread.id));
     return entries;
   };

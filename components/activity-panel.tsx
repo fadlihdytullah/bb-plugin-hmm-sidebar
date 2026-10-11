@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import {
-  experimental_useSidebarThreadActions,
   type PluginSidebarProject,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
+import { useThreadCommands, type ThreadCommands } from "@/hooks/use-thread-commands";
 import { forgetRecent, rememberRecent, useRecents } from "@/hooks/use-recents";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -54,7 +54,7 @@ function ActivityRow({
   onTogglePin?: (threadId: string, pinned: boolean) => void;
   onForget?: (threadId: string) => void;
   onNavigate: () => void;
-  actions: ReturnType<typeof experimental_useSidebarThreadActions>;
+  actions: ThreadCommands;
 }) {
   const title = threadTitle(thread);
   const isCurrent = thread.id === activeThreadId;
@@ -163,7 +163,7 @@ export function ActivityPanel({
   activeThreadId: string | null;
   onNavigate: () => void;
 }) {
-  const actions = experimental_useSidebarThreadActions();
+  const actions = useThreadCommands();
   const recentIds = useRecents();
   const [expanded, setExpanded] = useState(readExpanded);
 

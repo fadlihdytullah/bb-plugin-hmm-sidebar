@@ -3,10 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type {
-  ExperimentalSidebarNavigationItem,
-  ExperimentalSidebarNavigationProps,
   PluginCommandRegistration,
   PluginSidebarThread,
+  PluginThreadActionEntry,
 } from "@get-bb/plugin-sdk/app";
 
 vi.mock("sonner", () => ({
@@ -17,70 +16,20 @@ const PROJECT_DRAG_TYPE = "application/x-bb-collections-project";
 
 const app = await loadPluginApp(() => import("./app"));
 const threadList = app.threadLists[0]!;
-const sidebarNavigation = app.experimentalSidebarNavigations[0]!;
 const activityPalette = app.appOverlays[0]!;
 const splitThreadComposer = app.appOverlays[1]!;
 
-const navigationItems: readonly ExperimentalSidebarNavigationItem[] = [
-  {
-    id: "new-thread",
-    label: "New thread",
-    icon: { kind: "host", name: "new-thread" },
-    action: { kind: "new-thread" },
-    isDisabled: false,
-    shortcut: null,
-    isVisible: true,
-    isLoading: false,
-    pluginId: null,
-    experimental_Accessory: null,
-  },
-  {
-    id: "search-threads",
-    label: "Search threads",
-    icon: { kind: "host", name: "search" },
-    action: { kind: "search-threads" },
-    isDisabled: false,
-    shortcut: null,
-    isVisible: true,
-    isLoading: false,
-    pluginId: null,
-    experimental_Accessory: null,
-  },
-  {
-    id: "extensions",
-    label: "Extensions",
-    icon: { kind: "host", name: "extensions" },
-    action: { kind: "open-extensions" },
-    isDisabled: false,
-    shortcut: null,
-    isVisible: true,
-    isLoading: false,
-    pluginId: null,
-    experimental_Accessory: null,
-  },
-  {
-    id: "plugin-guide",
-    label: "Plugin Guide",
-    icon: { kind: "plugin", pluginId: "docs", icon: "BookOpen" },
-    action: { kind: "open-plugin-panel", pluginId: "docs", panelId: "guide" },
-    isDisabled: false,
-    shortcut: null,
-    isVisible: true,
-    isLoading: false,
-    pluginId: "docs",
-    experimental_Accessory: null,
-  },
-];
-
-const navigationProps: ExperimentalSidebarNavigationProps = {
-  isCompactViewport: false,
-  experimental_Original: () => null,
-};
-
-function renderNavigation() {
-  return renderSlot(sidebarNavigation, navigationProps, {
-    sidebarNavigation: { items: navigationItems },
-  });
+function threadActionEntry(
+  id: string,
+  run: () => Promise<void> = async () => {},
+  overrides: Partial<PluginThreadActionEntry["action"]> = {},
+): PluginThreadActionEntry {
+  return {
+    key: `bb--core/${id}`,
+    pluginId: "bb--core",
+    group: "4_lifecycle",
+    action: { label: id, icon: "Trash2", run, ...overrides },
+  };
 }
 
 const listProps = {
@@ -157,8 +106,7 @@ describe("Hmm Sidebar app", () => {
     expect(activityPalette.id).toBe("activity-palette");
   });
 
-  it("deletes the current thread through bb's confirmation via Mod+Shift+Backspace", () => {
-    // The harness collects commands but does not type them yet.
+  it("deletes the current thread through bb's confirmation via Mod+Shift+Backspace", async () => {
     const { commandPaletteActions } = app as unknown as {
       commandPaletteActions: PluginCommandRegistration[];
     };
@@ -169,17 +117,23 @@ describe("Hmm Sidebar app", () => {
     const context = { projectId: null, openPanel: () => false };
     expect(command.isAvailable?.({ ...context, threadId: null })).toBe(false);
 
-    const slot = renderSlot(app.appOverlays[2]!, {});
+    const run = vi.fn(async () => {});
+    renderSlot(app.appOverlays[2]!, {}, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [thread("thread-1", "project-1")],
+        projects: [],
+      },
+      threadActions: () => [threadActionEntry("delete", run, { variant: "destructive" })],
+    });
     command.run({ ...context, threadId: "thread-1" });
-    expect(slot.inspection.sidebarActionCalls).toEqual([
-      { method: "requestDelete", threadId: "thread-1" },
-    ]);
+    await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
   });
 
   it.each([
-    { focused: "thread-2", deleted: [{ method: "requestDelete", threadId: "thread-2" }] },
-    { focused: null, deleted: [] },
-  ])("deletes only the focused split pane's thread ($focused)", ({ focused, deleted }) => {
+    { focused: "thread-2", runs: 1 },
+    { focused: null, runs: 0 },
+  ])("deletes only the focused split pane's thread ($focused)", async ({ focused, runs }) => {
     const { commandPaletteActions } = app as unknown as {
       commandPaletteActions: PluginCommandRegistration[];
     };
@@ -187,7 +141,18 @@ describe("Hmm Sidebar app", () => {
       (entry) => entry.id === "delete-current-thread",
     )!;
     const rect = { x: 0, y: 0, width: 0.5, height: 1 };
-    const slot = renderSlot(app.appOverlays[2]!, {}, {
+    const deleted: string[] = [];
+    renderSlot(app.appOverlays[2]!, {}, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [thread("thread-1", "project-1"), thread("thread-2", "project-1")],
+        projects: [],
+      },
+      threadActions: (target) => [
+        threadActionEntry("delete", async () => {
+          deleted.push(target.id);
+        }),
+      ],
       sidebarSplitLayout: {
         panes: [
           { paneId: "a", rect, threadId: "thread-1", isFocused: false },
@@ -197,7 +162,36 @@ describe("Hmm Sidebar app", () => {
     });
 
     command.run({ projectId: null, openPanel: () => false, threadId: "thread-1" });
-    expect(slot.inspection.sidebarActionCalls).toEqual(deleted);
+    await waitFor(() => expect(deleted).toHaveLength(runs));
+    expect(deleted).toEqual(runs === 0 ? [] : ["thread-2"]);
+  });
+
+  it("deletes the row's own thread even while a split pane is focused", async () => {
+    const rect = { x: 0, y: 0, width: 0.5, height: 1 };
+    const deleted: string[] = [];
+    renderSlot(app.appOverlays[2]!, {}, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [thread("thread-1", "project-1"), thread("thread-2", "project-1")],
+        projects: [],
+      },
+      threadActions: (target) => [
+        threadActionEntry("delete", async () => {
+          deleted.push(target.id);
+        }),
+      ],
+      sidebarSplitLayout: {
+        panes: [
+          { paneId: "a", rect, threadId: "thread-1", isFocused: false },
+          { paneId: "b", rect, threadId: "thread-2", isFocused: true },
+        ],
+      },
+    });
+
+    window.dispatchEvent(
+      new CustomEvent("hmm-sidebar:delete-thread", { detail: "thread-1" }),
+    );
+    await waitFor(() => expect(deleted).toEqual(["thread-1"]));
   });
 
   it.each([
@@ -228,13 +222,11 @@ describe("Hmm Sidebar app", () => {
       );
       expect(slot.inspection.rpcCalls[0]?.method).toBe("threads_spawn");
       expect(
-        slot.inspection.sidebarActionCalls.filter(
-          (call) => call.method === "open",
-        ),
+        slot.inspection.navigateCalls.filter((call) => call.method === "toThread"),
       ).toEqual(
         opens === 0
           ? []
-          : [{ method: "open", threadId: "thread-new", options: { split: true } }],
+          : [{ method: "toThread", threadId: "thread-new", options: { split: true } }],
       );
     },
   );
@@ -274,71 +266,86 @@ describe("Hmm Sidebar app", () => {
     chatContainer.remove();
   });
 
-  it("keeps the logo and fixed actions in one official navigation header", async () => {
-    const slot = renderNavigation();
+  it("keeps the logo and New thread and Search actions in the sidebar header", async () => {
+    const slot = renderSlot(threadList, listProps, {
+      rpc: { collections_list: () => ({ collections: [] }) },
+    });
     const header = await slot.findByTestId("sidebar-brand");
     const actions = within(header).getByLabelText("Sidebar actions");
+    const searchRequests = vi.fn();
+    window.addEventListener("hmm-sidebar:open-activity-palette", searchRequests);
 
     expect(app.contentScripts).toHaveLength(0);
-    expect(app.experimentalSidebarNavigations).toHaveLength(1);
     expect(within(header).getByRole("img", { name: "suikodev" })).toBeTruthy();
-    expect(within(actions).getAllByRole("button")).toHaveLength(3);
+    expect(within(actions).getAllByRole("button")).toHaveLength(2);
 
     fireEvent.click(within(actions).getByRole("button", { name: "New thread" }));
-    fireEvent.click(
-      within(actions).getByRole("button", { name: "Search threads" }),
-    );
-    expect(slot.inspection.sidebarNavigationCalls).toEqual([
-      { method: "activate", itemId: "new-thread", openInSplit: false },
-      { method: "activate", itemId: "search-threads", openInSplit: false },
-    ]);
+    expect(slot.inspection.navigateCalls).toContainEqual({
+      method: "toCompose",
+      options: { focusPrompt: true },
+    });
+
+    fireEvent.click(within(actions).getByRole("button", { name: "Search threads" }));
+    expect(searchRequests).toHaveBeenCalledTimes(1);
+    window.removeEventListener("hmm-sidebar:open-activity-palette", searchRequests);
   });
 
-  it("keeps More usable after unchecking and checking every optional action", async () => {
-    const slot = renderNavigation();
-    const more = await slot.findByRole("button", {
-      name: "More sidebar navigation",
+  it("registers no sidebar navigation slot", () => {
+    expect(Object.keys(app)).not.toContain("experimentalSidebarNavigations");
+  });
+
+  it("registers New thread in split as a thread menu action", () => {
+    const action = app.threadActions.find((entry) => entry.id === "new-thread-split")!;
+    const requests = vi.fn();
+    window.addEventListener("hmm-sidebar:new-thread-split", requests);
+    const item = action.item({
+      thread: {} as never,
+      data: undefined,
+      sdk: {} as never,
+      navigate: {} as never,
+    })!;
+    expect(item.label).toBe("New thread in split");
+    void item.run({ requestRename: () => {} });
+    expect(requests).toHaveBeenCalledTimes(1);
+    window.removeEventListener("hmm-sidebar:new-thread-split", requests);
+  });
+
+  it("lists unread threads in their own section", async () => {
+    const slot = renderSlot(threadList, listProps, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [
+          { ...thread("Fresh reply", "project-1"), isUnread: true },
+          thread("Read thread", "project-1"),
+        ],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
+      },
+      rpc: { collections_list: () => ({ collections: [] }) },
     });
 
-    fireEvent.pointerDown(more, { button: 0, ctrlKey: false });
-    const extensions = await slot.findByRole("menuitem", {
-      name: "Extensions",
-    });
-    expect(extensions).toBeTruthy();
-    expect(document.body.style.pointerEvents).not.toBe("none");
-    expect(more.closest("header")?.contains(extensions)).toBe(true);
-    fireEvent.click(slot.getByRole("menuitem", { name: "Customize sidebar" }));
-
-    const newThread = await slot.findByRole("menuitemcheckbox", {
-      name: "New thread",
-    });
-    const searchThreads = slot.getByRole("menuitemcheckbox", {
-      name: "Search threads",
-    });
-    expect(newThread.getAttribute("aria-checked")).toBe("true");
-    expect(newThread.getAttribute("aria-disabled")).toBe("true");
-    expect(searchThreads.getAttribute("aria-checked")).toBe("true");
-    expect(searchThreads.getAttribute("aria-disabled")).toBe("true");
-
-    fireEvent.click(slot.getByRole("button", { name: "Uncheck all" }));
+    const unread = await slot.findByRole("list", { name: "Unread" });
+    expect(within(unread).getByText("Fresh reply")).toBeTruthy();
+    expect(within(unread).queryByText("Read thread")).toBeNull();
     expect(
-      slot
-        .getByRole("menuitemcheckbox", { name: "Extensions" })
-        .getAttribute("aria-checked"),
-    ).toBe("false");
-    fireEvent.click(slot.getByRole("button", { name: "Check all" }));
-    expect(
-      slot
-        .getByRole("menuitemcheckbox", { name: "Extensions" })
-        .getAttribute("aria-checked"),
-    ).toBe("true");
-    fireEvent.click(slot.getByRole("menuitem", { name: "Done" }));
-    await waitFor(() =>
-      expect(more.getAttribute("aria-expanded")).toBe("false"),
-    );
+      unread.querySelector("[data-sidebar-thread-shortcut-target]"),
+    ).toBeNull();
 
-    fireEvent.pointerDown(more, { button: 0, ctrlKey: false });
-    expect(await slot.findByRole("menuitem", { name: "Plugin Guide" })).toBeTruthy();
+    fireEvent.click(slot.getByRole("button", { name: "Collapse unread threads" }));
+    expect(slot.queryByRole("list", { name: "Unread" })).toBeNull();
+  });
+
+  it("hides the unread section when nothing is unread", async () => {
+    const slot = renderSlot(threadList, listProps, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [thread("Read thread", "project-1")],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
+      },
+      rpc: { collections_list: () => ({ collections: [] }) },
+    });
+
+    await slot.findByText("Read thread");
+    expect(slot.queryByRole("list", { name: "Unread" })).toBeNull();
   });
 
   it("limits collection projects to five, keeping projects with highlighted threads", async () => {
@@ -458,7 +465,7 @@ describe("Hmm Sidebar app", () => {
       rpc: { collections_list: () => ({ collections: [] }) },
     });
 
-    await slot.findByText("Newer chat");
+    await slot.findByRole("list", { name: "Chats" });
     const titles = () =>
       within(slot.getByRole("list", { name: "Chats" }))
         .getAllByRole("link")
@@ -633,8 +640,8 @@ describe("Hmm Sidebar app", () => {
 
     await slot.findByText("Build API");
     fireEvent.click(slot.getByRole("link", { name: "Build API" }));
-    expect(slot.inspection.sidebarActionCalls).toContainEqual({
-      method: "open",
+    expect(slot.inspection.navigateCalls).toContainEqual({
+      method: "toThread",
       threadId: "Build API",
       options: { split: false },
     });
@@ -678,7 +685,8 @@ describe("Hmm Sidebar app", () => {
     expect(slot.getByText("Engineering")).toBeTruthy();
   });
 
-  it("keeps an individual thread action menu above its row", async () => {
+  it("shows bb's own thread menu on each row and requests delete itself", async () => {
+    const pin = vi.fn(async () => {});
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
         status: "ready",
@@ -688,27 +696,26 @@ describe("Hmm Sidebar app", () => {
       rpc: {
         collections_list: () => ({ collections: [] }),
       },
+      threadActions: () => [
+        threadActionEntry("pin", pin, { label: "Pin thread", icon: "Pin" }),
+        threadActionEntry("mute", async () => {}, { label: "Mute notifications", icon: "BellOff" }),
+      ],
     });
 
     await slot.findByText("Build API");
+    const deleteRequests = vi.fn();
+    window.addEventListener("hmm-sidebar:delete-thread", deleteRequests);
     const deleteButton = slot.getByRole("button", { name: "Delete Build API" });
     expect(deleteButton.className).toContain("group-hover/thread:opacity-100");
     fireEvent.click(deleteButton);
-    expect(slot.inspection.sidebarActionCalls).toContainEqual({
-      method: "requestDelete",
-      threadId: "Build API",
-    });
+    expect(deleteRequests).toHaveBeenCalledTimes(1);
+    expect((deleteRequests.mock.calls[0]![0] as CustomEvent<string>).detail).toBe("Build API");
+    window.removeEventListener("hmm-sidebar:delete-thread", deleteRequests);
 
-    const trigger = slot.getByRole("button", { name: "Actions for Build API" });
-    fireEvent.click(trigger);
-
-    const menu = slot.getByRole("menu", { name: "Actions for Build API" });
-    expect(trigger.parentElement?.parentElement?.className).not.toContain(
-      "-translate-y-1/2",
-    );
-    expect(menu.className).toContain("z-[100]");
-    expect(menu.className).toContain("bg-popover");
-    expect(menu.closest("a")).toBeNull();
+    fireEvent.click(slot.getByRole("button", { name: "Actions for Build API" }));
+    expect(await slot.findByRole("menuitem", { name: /Mute notifications/ })).toBeTruthy();
+    fireEvent.click(slot.getByRole("menuitem", { name: /Pin thread/ }));
+    await waitFor(() => expect(pin).toHaveBeenCalledTimes(1));
   });
 
   it("keeps only pin, rename, clear, and delete in the project action menu", async () => {
@@ -918,6 +925,7 @@ describe("Hmm Sidebar app", () => {
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
+        threads_set_pinned: () => ({ ok: true }),
       },
     });
 
@@ -926,11 +934,12 @@ describe("Hmm Sidebar app", () => {
     fireEvent.click(
       within(activity).getByRole("button", { name: "Unpin Idle chat in Activity" }),
     );
-    expect(slot.inspection.sidebarActionCalls).toContainEqual({
-      method: "setPinned",
-      threadId: "Idle chat",
-      pinned: false,
-    });
+    await waitFor(() =>
+      expect(slot.inspection.rpcCalls).toContainEqual({
+        method: "threads_set_pinned",
+        input: { threadId: "Idle chat", pinned: false },
+      }),
+    );
   });
 
   it("toggles the Activity section and remembers the choice", async () => {
@@ -967,6 +976,7 @@ describe("Hmm Sidebar app", () => {
       },
       rpc: {
         collections_list: () => ({ collections: [] }),
+        threads_set_pinned: () => ({ ok: true }),
       },
     });
 
@@ -974,11 +984,12 @@ describe("Hmm Sidebar app", () => {
     fireEvent.click(
       within(activity).getByRole("button", { name: "Pin Build API in Activity" }),
     );
-    expect(slot.inspection.sidebarActionCalls).toContainEqual({
-      method: "setPinned",
-      threadId: "Build API",
-      pinned: true,
-    });
+    await waitFor(() =>
+      expect(slot.inspection.rpcCalls).toContainEqual({
+        method: "threads_set_pinned",
+        input: { threadId: "Build API", pinned: true },
+      }),
+    );
     expect(within(activity).getByText("Build API")).toBeTruthy();
   });
 
@@ -1003,8 +1014,8 @@ describe("Hmm Sidebar app", () => {
     expect(within(palette).queryByRole("option", { name: /Personal note/ })).toBeNull();
 
     fireEvent.keyDown(input, { key: "Enter" });
-    expect(slot.inspection.sidebarActionCalls).toContainEqual({
-      method: "open",
+    expect(slot.inspection.navigateCalls).toContainEqual({
+      method: "toThread",
       threadId: "Build API",
       options: { split: false },
     });
@@ -1032,8 +1043,8 @@ describe("Hmm Sidebar app", () => {
     expect(options[1]?.getAttribute("aria-selected")).toBe("true");
     fireEvent.keyDown(input, { key: "Enter", metaKey: true });
 
-    expect(slot.inspection.sidebarActionCalls).toContainEqual({
-      method: "open",
+    expect(slot.inspection.navigateCalls).toContainEqual({
+      method: "toThread",
       threadId: "Build API",
       options: { split: true },
     });
@@ -1061,5 +1072,72 @@ describe("Hmm Sidebar app", () => {
 
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(slot.queryByTestId("activity-palette")).toBeNull());
+  });
+
+  it("opens Activity from the sidebar Search request", async () => {
+    const slot = renderSlot(activityPalette, {}, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [runningThread("Build API", "project-1")],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
+      },
+    });
+
+    window.dispatchEvent(new CustomEvent("hmm-sidebar:open-activity-palette"));
+    expect(await slot.findByTestId("activity-palette")).toBeTruthy();
+  });
+
+  it("filters Activity by unread, pinned, and running", async () => {
+    const slot = renderSlot(activityPalette, {}, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [
+          { ...thread("Unread note", "project-1"), isUnread: true },
+          runningThread("Build API", "project-1"),
+          { ...thread("Pinned note", "project-1"), isPinned: true },
+        ],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
+      },
+    });
+
+    fireEvent.keyDown(document, { key: "e", metaKey: true });
+    const palette = await slot.findByTestId("activity-palette");
+    expect(within(palette).getAllByRole("option")).toHaveLength(3);
+
+    fireEvent.click(within(palette).getByRole("button", { name: "Unread" }));
+    expect(within(palette).getAllByRole("option")).toHaveLength(1);
+    expect(within(palette).getByRole("option", { name: /Unread note/ })).toBeTruthy();
+
+    fireEvent.click(within(palette).getByRole("button", { name: "Running" }));
+    expect(within(palette).getByRole("option", { name: /Build API/ })).toBeTruthy();
+    expect(within(palette).getAllByRole("option")).toHaveLength(1);
+
+    fireEvent.click(within(palette).getByRole("button", { name: "Pinned" }));
+    expect(within(palette).getByRole("option", { name: /Pinned note/ })).toBeTruthy();
+    expect(within(palette).getAllByRole("option")).toHaveLength(1);
+  });
+
+  it("sorts Activity by name when asked", async () => {
+    const slot = renderSlot(activityPalette, {}, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [
+          { ...thread("Zulu", "project-1"), isUnread: true, latestAttentionAt: 9 },
+          { ...thread("Alpha", "project-1"), isUnread: true, latestAttentionAt: 1 },
+        ],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
+      },
+    });
+
+    fireEvent.keyDown(document, { key: "e", metaKey: true });
+    const palette = await slot.findByTestId("activity-palette");
+    const titles = () =>
+      within(palette)
+        .getAllByRole("option")
+        .map((option) => option.getAttribute("aria-label")?.split(",")[0]);
+    expect(titles()).toEqual(["Zulu", "Alpha"]);
+
+    fireEvent.click(within(palette).getByRole("button", { name: "Sort by name" }));
+    expect(titles()).toEqual(["Alpha", "Zulu"]);
   });
 });

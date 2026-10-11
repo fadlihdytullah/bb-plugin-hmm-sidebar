@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import {
   experimental_NewThreadComposer as NewThreadComposer,
-  experimental_useSidebarThreadActions,
   experimental_useSidebarThreads,
   useBbContext,
   useRpc,
   type NewThreadRequest,
 } from "@get-bb/plugin-sdk/app";
+import { useThreadCommands } from "@/hooks/use-thread-commands";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -31,7 +31,7 @@ export function SplitThreadComposer() {
   const { projectId } = useBbContext();
   const rpc = useRpc<typeof rpcContract>();
   const { threads } = experimental_useSidebarThreads();
-  const actions = experimental_useSidebarThreadActions();
+  const actions = useThreadCommands();
   const [open, setOpen] = useState(false);
   const [pendingThreadId, setPendingThreadId] = useState<string | null>(null);
 

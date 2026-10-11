@@ -7,6 +7,8 @@ const hosts: Array<ReturnType<typeof createFakePluginHost>> = [];
 const updateProject = vi.fn(async () => ({ ok: true }));
 const deleteProject = vi.fn(async () => ({ ok: true }));
 const spawnThread = vi.fn(async () => ({ id: "thread-new" }));
+const pinThread = vi.fn(async () => ({ ok: true }));
+const unpinThread = vi.fn(async () => ({ ok: true }));
 
 type ThreadRow = Awaited<ReturnType<BbPluginApi["sdk"]["threads"]["list"]>>[number];
 
@@ -69,6 +71,8 @@ async function startHost() {
       },
       threads: {
         spawn: spawnThread,
+        pin: pinThread,
+        unpin: unpinThread,
       },
     },
   });
@@ -135,6 +139,22 @@ describe("Hmm Sidebar backend", () => {
     expect(spawnThread).toHaveBeenCalledWith(
       expect.not.objectContaining({ parentThreadId: expect.anything() }),
     );
+  });
+
+  it("pins and unpins a thread", async () => {
+    const host = await startHost();
+
+    await host.harness.behavior.callRpc("threads_set_pinned", {
+      threadId: "thread-1",
+      pinned: true,
+    });
+    await host.harness.behavior.callRpc("threads_set_pinned", {
+      threadId: "thread-2",
+      pinned: false,
+    });
+
+    expect(pinThread).toHaveBeenCalledWith({ threadId: "thread-1" });
+    expect(unpinThread).toHaveBeenCalledWith({ threadId: "thread-2" });
   });
 
   it("rejects duplicate names and the personal Threads project", async () => {

@@ -1,11 +1,9 @@
 Hmm Sidebar adds a calm, compact project organizer to BB's left sidebar. Its
 primary header is a single compact action bar: the pixel "suikodev" wordmark
-stays on the left, while New thread, Search threads, and More are icon-only
-actions. New thread and
-Search threads are always visible and cannot be unchecked. More remains available
-even when every optional action is hidden, and contains Customize sidebar plus
-the selected extra navigation. Collections stay at the top, while projects that
-have not been filed remain in the same flat list shape as BB's native sidebar.
+stays on the left, while New thread and Search threads are icon-only actions;
+Search threads opens the Activity palette. Unread threads get their own section,
+Collections stay at the top, and projects that have not been filed remain in the
+same flat list shape as BB's native sidebar.
 
 Create, rename, reorder, collapse, and delete Collections without changing BB
 projects themselves. Each Collection can be toggled individually, and every
@@ -18,12 +16,13 @@ dialogs offer Bulk deletions to pick specific threads or chats to delete.
 Deleting a Collection simply returns its projects to the ungrouped list. The
 personal Threads project is protected and remains outside every Collection.
 Pin project in a project's action menu adds it to a Pinned section that stays
-fixed above Collections, just below the navigation bar, for the projects in
+fixed above Collections, just below the sidebar header, for the projects in
 focus right now. Pinned projects also stay in their usual place.
 
 Thread rows continue to use BB's own navigation and actions: unread state,
-pinning, rename, archive, delete confirmation, keyboard shortcuts, and split
-view gestures. Rows use a compact density so more threads fit on screen, and
+BB's own thread menu (pin, rename, archive, notification muting, and any action
+BB adds later), delete confirmation, keyboard shortcuts, and split view
+gestures. Rows use a compact density so more threads fit on screen, and
 empty projects show only their header. The list stays muted: idle threads are
 dimmed, while the open thread and threads that are running or need attention
 stand out. Projects and Chats show up to five threads and Collections up to five
@@ -38,7 +37,8 @@ BB's native pin state is respected and can be toggled from Activity or Recents.
 The Activity section can be collapsed by clicking its header, with its chevron
 shown on hover, and the choice persists.
 The same Activity view is available as a floating palette with **Cmd+E**;
-search matches thread titles and project names, arrow keys move through the
+search matches thread titles and project names, All / Unread / Pinned / Running
+filters and a Recent or A–Z order narrow the results, arrow keys move through the
 results, **Enter** opens the selected thread, and **Cmd+Enter** opens a split.
 Recents lists the five most recently active threads, and each row shows a status dot, the
 title, and the project name.

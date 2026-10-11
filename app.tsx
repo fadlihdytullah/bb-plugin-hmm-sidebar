@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import {
   definePluginApp,
-  experimental_useSidebarThreadActions,
+  experimental_THREAD_ACTION_GROUPS,
   experimental_useSidebarThreads,
+  experimental_useThreadActions,
   useRpc,
   useSidebarSplitLayout,
+  type PluginSidebarThread,
   type PluginThreadListProps,
 } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
@@ -24,12 +26,18 @@ import {
 } from "@/components/project-group";
 import { BulkThreadPicker } from "@/components/bulk-thread-picker";
 import { ThreadList } from "@/components/thread-row";
-import { CompactSidebarNavigation } from "@/components/sidebar-navigation";
+import { SidebarHeader } from "@/components/sidebar-header";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { useCollapsedCollections } from "@/hooks/use-collapsed-collections";
 import { useCollections } from "@/hooks/use-collections";
 import { usePinnedProjects } from "@/hooks/use-pinned-projects";
+import { useThreadCommands } from "@/hooks/use-thread-commands";
+import {
+  DELETE_CURRENT_THREAD_EVENT,
+  DELETE_THREAD_EVENT,
+} from "@/lib/thread-delete";
+import { toThreadActionTarget } from "@/lib/thread-target";
 import { buildSidebarModel, threadTitle } from "@/lib/sidebar-model";
 import { rpcContract, type Collection } from "@/contract";
 import {
@@ -87,10 +95,11 @@ function CollectionsSidebar({
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [projectSort, setProjectSort] = useState<ProjectSort>("name-asc");
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>("all");
+  const [unreadExpanded, setUnreadExpanded] = useState(true);
   const [chatsExpanded, setChatsExpanded] = useState(true);
   const [chatSort, setChatSort] = useState<ChatSort>("recent");
   const [chatFilter, setChatFilter] = useState<ChatFilter>("all");
-  const threadActions = experimental_useSidebarThreadActions();
+  const threadActions = useThreadCommands();
   const rpc = useRpc<typeof rpcContract>();
   const [clearChatsOpen, setClearChatsOpen] = useState(false);
   const [clearChatsBusy, setClearChatsBusy] = useState(false);
@@ -144,6 +153,18 @@ function CollectionsSidebar({
         : left.updatedAt - right.updatedAt;
     });
   }, [chatFilter, chatSort, model.personalProject]);
+
+  const unreadThreads = useMemo(
+    () =>
+      threads
+        .filter((thread) => thread.isUnread && !thread.isArchived && !thread.isHidden)
+        .sort(
+          (left, right) =>
+            right.latestAttentionAt - left.latestAttentionAt ||
+            left.id.localeCompare(right.id),
+        ),
+    [threads],
+  );
 
   const bulkChats = useMemo(
     () => (model.personalProject?.threads ?? []).filter((thread) => !thread.isArchived),
@@ -342,6 +363,7 @@ function CollectionsSidebar({
       className="flex h-full min-h-0 flex-col"
       onDragEnd={() => setLooseDropActive(false)}
     >
+      <SidebarHeader />
       {pinnedProjects.length > 0 ? (
         <div className="group/section shrink-0 border-b border-border/60 px-2 py-2">
           <div
@@ -391,6 +413,46 @@ function CollectionsSidebar({
         </div>
       ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto px-2">
+      {status === "ready" && unreadThreads.length > 0 ? (
+        <div className={`group/section pt-2 ${unreadExpanded ? "pb-3" : "pb-2"}`}>
+          <div
+            className={`flex cursor-pointer items-center justify-between px-1.5 ${unreadExpanded ? "mb-1" : ""}`}
+            onClick={() => setUnreadExpanded((current) => !current)}
+          >
+            <span className="select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
+              Unread
+              <span className="ml-1.5 tabular-nums opacity-60">{unreadThreads.length}</span>
+            </span>
+            <div className={SECTION_ACTIONS_CLASS} onClick={(event) => event.stopPropagation()}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7 text-muted-foreground"
+                aria-label={unreadExpanded ? "Collapse unread threads" : "Show unread threads"}
+                onClick={() => setUnreadExpanded((current) => !current)}
+              >
+                <Icon
+                  name="ChevronDown"
+                  className={`size-4 transition-transform motion-reduce:transition-none ${
+                    unreadExpanded ? "rotate-180" : ""
+                  }`}
+                  aria-hidden="true"
+                />
+              </Button>
+            </div>
+          </div>
+          {unreadExpanded ? (
+            <ThreadList
+              label="Unread"
+              shortcutTargets={false}
+              threads={unreadThreads}
+              activeThreadId={activeThreadId}
+              onNavigate={onNavigate}
+            />
+          ) : null}
+        </div>
+      ) : null}
       <div className={`group/section pt-2 ${collectionsExpanded ? "pb-3" : "pb-2"}`}>
       <div
         className={`flex cursor-pointer items-center justify-between px-1.5 ${collectionsExpanded ? "mb-1" : ""}`}
@@ -755,27 +817,60 @@ function CollectionsThreadList(props: PluginThreadListProps) {
   return <CollectionsSidebar {...props} />;
 }
 
-const DELETE_THREAD_EVENT = "hmm-sidebar:delete-thread";
+function DeleteThreadRunner({
+  thread,
+  onSettled,
+}: {
+  thread: PluginSidebarThread;
+  onSettled: () => void;
+}) {
+  const entries = experimental_useThreadActions(toThreadActionTarget(thread));
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    const entry =
+      entries.find((candidate) => candidate.key.endsWith("/delete")) ??
+      entries.find((candidate) => candidate.action.variant === "destructive");
+    if (entry === undefined || entry.action.disabled === true) {
+      toast.error("Could not delete thread", {
+        description: "Delete is not available for this thread.",
+      });
+      onSettled();
+      return;
+    }
+    void entry.action.run().finally(onSettled);
+  }, [entries, onSettled]);
+  return null;
+}
 
-/**
- * Commands run outside React, but `requestDelete` (bb's own confirmation
- * dialog) is only reachable through a hook, so the command hands the thread
- * id to this always-mounted overlay. In a split the command's thread is the
- * route's, not the pane the user is in, so the focused pane wins.
- */
 function DeleteThreadListener() {
-  const actions = experimental_useSidebarThreadActions();
+  const { threads } = experimental_useSidebarThreads();
   const split = useSidebarSplitLayout();
   const focusedThreadId = split?.panes.find((pane) => pane.isFocused)?.threadId ?? null;
+  const [pendingThreadId, setPendingThreadId] = useState<string | null>(null);
+  const clearPending = useCallback(() => setPendingThreadId(null), []);
+
   useEffect(() => {
-    const onDelete = (event: Event) => {
-      const threadId = split ? focusedThreadId : (event as CustomEvent<string>).detail;
-      if (threadId !== null) actions.requestDelete(threadId);
+    const onDeleteThread = (event: Event) => {
+      setPendingThreadId((event as CustomEvent<string>).detail);
     };
-    window.addEventListener(DELETE_THREAD_EVENT, onDelete);
-    return () => window.removeEventListener(DELETE_THREAD_EVENT, onDelete);
-  }, [actions, split, focusedThreadId]);
-  return null;
+    const onDeleteCurrent = (event: Event) => {
+      const threadId = split ? focusedThreadId : (event as CustomEvent<string>).detail;
+      if (threadId !== null) setPendingThreadId(threadId);
+    };
+    window.addEventListener(DELETE_THREAD_EVENT, onDeleteThread);
+    window.addEventListener(DELETE_CURRENT_THREAD_EVENT, onDeleteCurrent);
+    return () => {
+      window.removeEventListener(DELETE_THREAD_EVENT, onDeleteThread);
+      window.removeEventListener(DELETE_CURRENT_THREAD_EVENT, onDeleteCurrent);
+    };
+  }, [split, focusedThreadId]);
+
+  const thread = threads.find((candidate) => candidate.id === pendingThreadId);
+  if (pendingThreadId === null) return null;
+  if (thread === undefined) return null;
+  return <DeleteThreadRunner key={pendingThreadId} thread={thread} onSettled={clearPending} />;
 }
 
 export default definePluginApp((app) => {
@@ -794,6 +889,19 @@ export default definePluginApp((app) => {
       window.dispatchEvent(new CustomEvent(OPEN_SPLIT_COMPOSER_EVENT));
     },
   });
+  app.slots.experimental_threadAction({
+    id: "new-thread-split",
+    title: "New thread in split",
+    icon: "Columns2",
+    group: experimental_THREAD_ACTION_GROUPS.open,
+    item: () => ({
+      label: "New thread in split",
+      icon: "Columns2",
+      run: () => {
+        window.dispatchEvent(new CustomEvent(OPEN_SPLIT_COMPOSER_EVENT));
+      },
+    }),
+  });
   app.slots.experimental_appOverlay({
     id: "delete-thread-listener",
     component: DeleteThreadListener,
@@ -801,20 +909,14 @@ export default definePluginApp((app) => {
   app.commands.register({
     id: "delete-current-thread",
     title: "Hmm Sidebar: Delete current thread",
-    // macOS labels Backspace as "delete".
     defaultShortcut: { key: "Backspace", mod: true, shift: true },
     isAvailable: ({ threadId }) => threadId !== null,
     run: ({ threadId }) => {
       if (threadId === null) return;
-      window.dispatchEvent(new CustomEvent(DELETE_THREAD_EVENT, { detail: threadId }));
+      window.dispatchEvent(
+        new CustomEvent(DELETE_CURRENT_THREAD_EVENT, { detail: threadId }),
+      );
     },
-  });
-  app.slots.experimental_sidebarNavigation({
-    id: "compact-actions",
-    title: "Hmm Sidebar actions",
-    description:
-      "Keep New thread and Search threads visible, with remaining navigation inside More.",
-    component: CompactSidebarNavigation,
   });
   app.slots.experimental_threadList({
     id: "collections",

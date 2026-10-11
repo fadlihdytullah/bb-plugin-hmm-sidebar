@@ -1,7 +1,6 @@
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  experimental_useSidebarThreadActions,
   experimental_useSidebarThreads,
   useBbContext,
 } from "@get-bb/plugin-sdk/app";
@@ -14,13 +13,18 @@ import {
 import { CompactViewportOverrideProvider } from "@/components/ui/hooks/use-compact-viewport";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
+import { useThreadCommands } from "@/hooks/use-thread-commands";
 import { rememberRecent } from "@/hooks/use-recents";
 import { usePortalScopeProps } from "@/lib/portal-scope";
 import {
+  ACTIVITY_PALETTE_FILTERS,
   buildActivityPaletteGroups,
   threadTitle,
   type ActivityPaletteEntry,
+  type ActivityPaletteFilter,
+  type ActivityPaletteSort,
 } from "@/lib/activity-model";
+import { OPEN_ACTIVITY_PALETTE_EVENT } from "@/lib/palette-event";
 
 function ActivityPaletteRow({
   entry,
@@ -68,11 +72,13 @@ function ActivityPaletteRow({
 export function ActivityPalette() {
   const { threadId: activeThreadId } = useBbContext();
   const { status, threads, projects } = experimental_useSidebarThreads();
-  const actions = experimental_useSidebarThreadActions();
+  const actions = useThreadCommands();
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<ActivityPaletteFilter>("all");
+  const [sort, setSort] = useState<ActivityPaletteSort>("recent");
   const [portalHost, setPortalHost] = useState<HTMLDivElement | null>(null);
   const setPortalHostRef = useCallback(
     (node: HTMLDivElement | null) => setPortalHost(node),
@@ -85,8 +91,8 @@ export function ActivityPalette() {
   const portalScopeProps = usePortalScopeProps();
 
   const groups = useMemo(
-    () => buildActivityPaletteGroups(threads, projects, query),
-    [projects, query, threads],
+    () => buildActivityPaletteGroups(threads, projects, query, { filter, sort }),
+    [filter, projects, query, sort, threads],
   );
   const visibleEntries = useMemo(
     () => groups.flatMap((group) => group.entries),
@@ -119,8 +125,18 @@ export function ActivityPalette() {
       }
     };
 
+    const onOpenRequest = () => {
+      setQuery("");
+      setSelectedId(activeThreadId);
+      setOpen(true);
+    };
+
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    window.addEventListener(OPEN_ACTIVITY_PALETTE_EVENT, onOpenRequest);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener(OPEN_ACTIVITY_PALETTE_EVENT, onOpenRequest);
+    };
   }, [activeThreadId]);
 
   useEffect(() => {
@@ -227,6 +243,37 @@ export function ActivityPalette() {
           </kbd>
         </div>
         <div
+          role="toolbar"
+          aria-label="Filter and sort Activity"
+          className="flex items-center gap-1 border-b border-border px-2 py-1.5"
+        >
+          {ACTIVITY_PALETTE_FILTERS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              tabIndex={-1}
+              aria-pressed={filter === entry.id}
+              className={`rounded-md px-2 py-0.5 text-[11px] transition-colors motion-reduce:transition-none ${
+                filter === entry.id
+                  ? "bg-state-active text-foreground"
+                  : "text-muted-foreground hover:bg-state-hover hover:text-foreground"
+              }`}
+              onClick={() => setFilter(entry.id)}
+            >
+              {entry.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label={`Sort by ${sort === "recent" ? "name" : "recent"}`}
+            className="ml-auto rounded-md px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-state-hover hover:text-foreground motion-reduce:transition-none"
+            onClick={() => setSort((current) => (current === "recent" ? "name" : "recent"))}
+          >
+            {sort === "recent" ? "Recent" : "A–Z"}
+          </button>
+        </div>
+        <div
           id="activity-palette-results"
           role="listbox"
           aria-label="Activity results"
@@ -244,7 +291,9 @@ export function ActivityPalette() {
             <p role="status" className="px-3 py-6 text-center text-sm text-muted-foreground">
               {query.trim().length > 0
                 ? "No Activity items match your search."
-                : "Nothing needs you right now."}
+                : filter !== "all"
+                  ? "No Activity items match this filter."
+                  : "Nothing needs you right now."}
             </p>
           ) : (
             groups.map((group) => {

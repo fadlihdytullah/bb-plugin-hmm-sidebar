@@ -1,6 +1,5 @@
 import { useMemo, useState, type DragEvent } from "react";
 import {
-  experimental_useSidebarThreadActions,
   useRpc,
   type PluginSidebarProject,
   type PluginSidebarThread,
@@ -22,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { ThreadList } from "@/components/thread-row";
 import { togglePinnedProject, usePinnedProjects } from "@/hooks/use-pinned-projects";
+import { useThreadCommands } from "@/hooks/use-thread-commands";
 import { rpcContract } from "@/contract";
 
 export const PROJECT_DRAG_TYPE = "application/x-bb-collections-project";
@@ -69,7 +69,7 @@ export function ProjectGroup({
   ) => Promise<void>;
   onError: (cause: unknown) => void;
 }) {
-  const actions = experimental_useSidebarThreadActions();
+  const actions = useThreadCommands();
   const rpc = useRpc<typeof rpcContract>();
   const [expanded, setExpanded] = useState(initiallyExpanded);
   const isPinned = usePinnedProjects().includes(project.id);

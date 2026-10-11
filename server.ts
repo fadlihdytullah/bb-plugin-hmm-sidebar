@@ -414,6 +414,11 @@ export default async function plugin(bb: BbPluginApi) {
       const thread = await bb.sdk.threads.spawn(request);
       return { threadId: thread.id };
     },
+    threads_set_pinned: async ({ threadId, pinned }) => {
+      if (pinned) await bb.sdk.threads.pin({ threadId });
+      else await bb.sdk.threads.unpin({ threadId });
+      return { ok: true as const };
+    },
   });
 
   bb.onDispose(() => {
