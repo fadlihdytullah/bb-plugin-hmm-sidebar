@@ -41,7 +41,7 @@ search matches thread titles and project names, All / Unread / Pinned / Running
 filters and a Recent or A–Z order narrow the results, arrow keys move through the
 results, **Enter** opens the selected thread, and **Cmd+Enter** opens a split.
 Recents lists the five most recently active threads, and each row shows a status dot, the
-title, and the project name.
+title, and the project name, which a split button replaces on hover.
 The palette is centered horizontally at 15% from the top of BB's main chat
 container, and stays a centered dialog on narrow windows instead of becoming a
 bottom drawer. The new-thread-in-split dialog behaves the same way.

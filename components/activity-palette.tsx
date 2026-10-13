@@ -40,32 +40,44 @@ function ActivityPaletteRow({
   const title = threadTitle(entry.thread);
 
   return (
-    <button
-      id={`activity-palette-option-${entry.thread.id}`}
-      type="button"
-      role="option"
-      aria-selected={selected}
-      aria-label={`${title}, ${entry.project}, ${entry.status.label}`}
-      className={`flex h-8 w-full min-w-0 items-center gap-2.5 rounded-md px-2 text-left text-foreground transition-colors motion-reduce:transition-none ${
-        selected ? "bg-state-active" : "hover:bg-state-hover"
-      }`}
-      onMouseEnter={onSelect}
-      onClick={() => onOpen(entry.thread.id, false)}
-    >
-      <span
-        aria-hidden="true"
-        title={entry.status.label}
-        className="flex size-3 shrink-0 items-center justify-center"
+    <div role="presentation" className="group/row relative">
+      <button
+        id={`activity-palette-option-${entry.thread.id}`}
+        type="button"
+        role="option"
+        aria-selected={selected}
+        aria-label={`${title}, ${entry.project}, ${entry.status.label}`}
+        className={`flex h-8 w-full min-w-0 items-center gap-2.5 rounded-md px-2 text-left text-foreground transition-colors motion-reduce:transition-none ${
+          selected ? "bg-state-active" : "hover:bg-state-hover"
+        }`}
+        onMouseEnter={onSelect}
+        onClick={() => onOpen(entry.thread.id, false)}
       >
-        <span className={`size-1.5 rounded-full ${entry.status.dotClassName}`} />
-      </span>
-      <span className="min-w-0 flex-1 truncate text-[13px] leading-5">
-        {title}
-      </span>
-      <span className="max-w-[35%] shrink-0 truncate text-xs text-muted-foreground">
-        {entry.project}
-      </span>
-    </button>
+        <span
+          aria-hidden="true"
+          title={entry.status.label}
+          className="flex size-3 shrink-0 items-center justify-center"
+        >
+          <span className={`size-1.5 rounded-full ${entry.status.dotClassName}`} />
+        </span>
+        <span className="min-w-0 flex-1 truncate text-[13px] leading-5">
+          {title}
+        </span>
+        <span className="max-w-[35%] shrink-0 truncate text-xs text-muted-foreground transition-opacity group-hover/row:opacity-0 group-focus-within/row:opacity-0 motion-reduce:transition-none">
+          {entry.project}
+        </span>
+      </button>
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label={`Open ${title} in split`}
+        title="Open in split (⌘↵)"
+        className="pointer-events-none absolute right-1 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:bg-state-hover hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/row:pointer-events-auto group-hover/row:opacity-100 motion-reduce:transition-none"
+        onClick={() => onOpen(entry.thread.id, true)}
+      >
+        <Icon name="Columns2" className="size-3.5" aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 

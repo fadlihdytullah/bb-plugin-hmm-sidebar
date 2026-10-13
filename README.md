@@ -55,7 +55,8 @@ Running** filters, switch between **Recent** and **A–Z** order, move through
 Currently active, Needs attention, Pinned, and Recents with the arrow keys,
 press **Enter** to open a thread, or **Cmd+Enter** to open it in a split. Recents lists the five most
 recently active threads, including ones outside any project. Each
-row shows a status dot, the thread title, and the project name on the right. The
+row shows a status dot, the thread title, and the project name on the right;
+hovering a row swaps the project name for a split button. The
 palette is centered horizontally at 15% from the top of BB's main chat
 container, and stays a centered dialog on narrow windows instead of becoming a
 bottom drawer. The new-thread-in-split dialog behaves the same way.

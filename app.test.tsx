@@ -1050,6 +1050,26 @@ describe("Hmm Sidebar app", () => {
     });
   });
 
+  it("opens an Activity row in a split from its hover button", async () => {
+    const slot = renderSlot(activityPalette, {}, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [runningThread("Build API", "project-1")],
+        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
+      },
+    });
+
+    fireEvent.keyDown(document, { key: "e", metaKey: true });
+    const palette = await slot.findByTestId("activity-palette");
+    fireEvent.click(within(palette).getByRole("button", { name: "Open Build API in split" }));
+
+    expect(slot.inspection.navigateCalls).toContainEqual({
+      method: "toThread",
+      threadId: "Build API",
+      options: { split: true },
+    });
+  });
+
   it("keeps Activity sections distinct and closes with Escape", async () => {
     const slot = renderSlot(activityPalette, {}, {
       sidebarThreads: {
