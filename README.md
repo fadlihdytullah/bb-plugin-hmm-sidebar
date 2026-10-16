@@ -72,8 +72,9 @@ Cmd+Shift+Delete on macOS) opens BB's own delete confirmation for the current
 thread, or for the focused pane when a split is open.
 
 **Zen mode current thread** (command palette) opens the current thread, or the focused pane when
-a split is open, in a centered dialog over a dark overlay. The header shows the
-thread name above a separator; **Esc** or the close button dismisses it.
+a split is open, in a dialog near the bottom of the screen over a blurred glass overlay, stacked
+with two card layers and a pixel "zen" wordmark below. The centered thread name sits above a separator;
+**Esc** or the dimmed close button on the right dismisses it.
 
 **Check me later** (command palette) covers the current thread, or the focused pane when a split
 is open, with a blurred glass overlay showing a pixel "check me" wordmark and the thread title. Click the
