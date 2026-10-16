@@ -52,6 +52,10 @@ a split, only in the window that ran the command. **Hmm Sidebar: Delete current
 thread** (**Cmd+Shift+Backspace**) opens BB's delete confirmation for the
 current thread or the focused split pane.
 
+**Hmm Zen** in the command palette opens the current thread, or the focused split
+pane, in a dialog over a dark overlay, with the thread name as header and Esc or
+a close button to dismiss.
+
 Because BB's thread-list replacement slot is exclusive, selecting Hmm Sidebar uses
 one composed list.
 

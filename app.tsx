@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { ActionMenu, type ActionMenuItem } from "@/components/action-menu";
 import { ActivityPanel } from "@/components/activity-panel";
 import { ActivityPalette } from "@/components/activity-palette";
+import { ZenDialog } from "@/components/zen-dialog";
+import { OPEN_ZEN_EVENT } from "@/lib/zen-event";
 import {
   OPEN_SPLIT_COMPOSER_EVENT,
   SplitThreadComposer,
@@ -883,6 +885,15 @@ export default definePluginApp((app) => {
     component: SplitThreadComposer,
   });
   app.commands.register({
+    id: "zen",
+    title: "Hmm Zen",
+    isAvailable: ({ threadId }) => threadId !== null,
+    run: ({ threadId }) => {
+      if (threadId === null) return;
+      window.dispatchEvent(new CustomEvent(OPEN_ZEN_EVENT, { detail: threadId }));
+    },
+  });
+  app.commands.register({
     id: "new-thread-split",
     title: "Hmm Sidebar: New thread in split",
     run: () => {
@@ -905,6 +916,10 @@ export default definePluginApp((app) => {
   app.slots.experimental_appOverlay({
     id: "delete-thread-listener",
     component: DeleteThreadListener,
+  });
+  app.slots.experimental_appOverlay({
+    id: "zen-dialog",
+    component: ZenDialog,
   });
   app.commands.register({
     id: "delete-current-thread",

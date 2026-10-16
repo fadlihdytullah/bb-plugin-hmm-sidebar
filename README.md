@@ -71,6 +71,10 @@ under **Settings → Keyboard**.
 Cmd+Shift+Delete on macOS) opens BB's own delete confirmation for the current
 thread, or for the focused pane when a split is open.
 
+**Hmm Zen** (command palette) opens the current thread, or the focused pane when
+a split is open, in a centered dialog over a dark overlay. The header shows the
+thread name; **Esc** or the close button dismisses it.
+
 Collections are plugin-owned state. Create one with the folder-plus button or
 drag projects into it. Collection names and membership are shared across
 clients; a Collection's collapsed state is kept per client.
