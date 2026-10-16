@@ -102,7 +102,7 @@ afterEach(() => {
 
 describe("Hmm Sidebar app", () => {
   it("registers an app-wide Activity palette", () => {
-    expect(app.appOverlays).toHaveLength(4);
+    expect(app.appOverlays).toHaveLength(5);
     expect(activityPalette.id).toBe("activity-palette");
   });
 

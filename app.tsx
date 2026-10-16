@@ -15,6 +15,8 @@ import { ActivityPanel } from "@/components/activity-panel";
 import { ActivityPalette } from "@/components/activity-palette";
 import { ZenDialog } from "@/components/zen-dialog";
 import { OPEN_ZEN_EVENT } from "@/lib/zen-event";
+import { CheckLaterOverlay } from "@/components/check-later-overlay";
+import { markCheckLater, setActiveThreadId } from "@/lib/check-later";
 import {
   OPEN_SPLIT_COMPOSER_EVENT,
   SplitThreadComposer,
@@ -816,6 +818,9 @@ function CollectionsSidebar({
 }
 
 function CollectionsThreadList(props: PluginThreadListProps) {
+  useEffect(() => {
+    setActiveThreadId(props.activeThreadId);
+  }, [props.activeThreadId]);
   return <CollectionsSidebar {...props} />;
 }
 
@@ -894,6 +899,15 @@ export default definePluginApp((app) => {
     },
   });
   app.commands.register({
+    id: "check-later",
+    title: "Check me later",
+    isAvailable: ({ threadId }) => threadId !== null,
+    run: ({ threadId }) => {
+      if (threadId === null) return;
+      markCheckLater(threadId);
+    },
+  });
+  app.commands.register({
     id: "new-thread-split",
     title: "New thread in split",
     run: () => {
@@ -920,6 +934,10 @@ export default definePluginApp((app) => {
   app.slots.experimental_appOverlay({
     id: "zen-dialog",
     component: ZenDialog,
+  });
+  app.slots.experimental_appOverlay({
+    id: "check-later-overlay",
+    component: CheckLaterOverlay,
   });
   app.commands.register({
     id: "delete-current-thread",

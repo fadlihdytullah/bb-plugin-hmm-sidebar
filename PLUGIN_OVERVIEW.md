@@ -56,6 +56,10 @@ current thread or the focused split pane.
 pane, in a dialog over a dark overlay, with the thread name as header and Esc or
 a close button to dismiss.
 
+**Check me later** in the command palette covers the current thread, or the focused split pane,
+with a blurred glass overlay showing a pixel "check me" wordmark and the thread title. Clicking
+the cover reveals the thread again.
+
 Because BB's thread-list replacement slot is exclusive, selecting Hmm Sidebar uses
 one composed list.
 

@@ -75,6 +75,10 @@ thread, or for the focused pane when a split is open.
 a split is open, in a centered dialog over a dark overlay. The header shows the
 thread name above a separator; **Esc** or the close button dismisses it.
 
+**Check me later** (command palette) covers the current thread, or the focused pane when a split
+is open, with a blurred glass overlay showing a pixel "check me" wordmark and the thread title. Click the
+cover to reveal the thread again.
+
 Collections are plugin-owned state. Create one with the folder-plus button or
 drag projects into it. Collection names and membership are shared across
 clients; a Collection's collapsed state is kept per client.
