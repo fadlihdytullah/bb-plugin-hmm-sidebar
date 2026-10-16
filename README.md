@@ -61,7 +61,7 @@ palette is centered horizontally at 15% from the top of BB's main chat
 container, and stays a centered dialog on narrow windows instead of becoming a
 bottom drawer. The new-thread-in-split dialog behaves the same way.
 
-Run **Hmm Sidebar: New thread in split** from BB's command palette
+Run **New thread in split** from BB's command palette
 (**Cmd+Shift+P**) to open BB's new-thread composer in a dialog, seeded with the
 current project. Submitting starts the thread and opens it in a split in the
 same BB window only; other open BB windows are unaffected. Bind a shortcut to it
@@ -71,9 +71,9 @@ under **Settings → Keyboard**.
 Cmd+Shift+Delete on macOS) opens BB's own delete confirmation for the current
 thread, or for the focused pane when a split is open.
 
-**Hmm Zen** (command palette) opens the current thread, or the focused pane when
+**Zen mode current thread** (command palette) opens the current thread, or the focused pane when
 a split is open, in a centered dialog over a dark overlay. The header shows the
-thread name; **Esc** or the close button dismisses it.
+thread name above a separator; **Esc** or the close button dismisses it.
 
 Collections are plugin-owned state. Create one with the folder-plus button or
 drag projects into it. Collection names and membership are shared across

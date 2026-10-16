@@ -52,12 +52,9 @@ export function ZenDialog() {
             <DialogTitle className="truncate text-sm font-medium">
               {thread ? threadTitle(thread) : "Zen"}
             </DialogTitle>
-            <kbd className="ml-auto mr-2 shrink-0 rounded border border-border px-1 py-0.5 text-[10px] leading-none text-muted-foreground">
-              esc
-            </kbd>
             <DialogClose
               aria-label="Close"
-              className="flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-state-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring motion-reduce:transition-none"
+              className="ml-auto flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-state-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring motion-reduce:transition-none"
             >
               <Icon name="X" className="size-3.5" aria-hidden="true" />
             </DialogClose>

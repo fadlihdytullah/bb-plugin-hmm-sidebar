@@ -886,7 +886,7 @@ export default definePluginApp((app) => {
   });
   app.commands.register({
     id: "zen",
-    title: "Hmm Zen",
+    title: "Zen mode current thread",
     isAvailable: ({ threadId }) => threadId !== null,
     run: ({ threadId }) => {
       if (threadId === null) return;
@@ -895,7 +895,7 @@ export default definePluginApp((app) => {
   });
   app.commands.register({
     id: "new-thread-split",
-    title: "Hmm Sidebar: New thread in split",
+    title: "New thread in split",
     run: () => {
       window.dispatchEvent(new CustomEvent(OPEN_SPLIT_COMPOSER_EVENT));
     },

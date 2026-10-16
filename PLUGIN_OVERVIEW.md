@@ -46,13 +46,13 @@ The palette is centered horizontally at 15% from the top of BB's main chat
 container, and stays a centered dialog on narrow windows instead of becoming a
 bottom drawer. The new-thread-in-split dialog behaves the same way.
 
-**Hmm Sidebar: New thread in split** in the command palette (**Cmd+Shift+P**)
+**New thread in split** in the command palette (**Cmd+Shift+P**)
 opens BB's full new-thread composer in a dialog and opens the started thread in
 a split, only in the window that ran the command. **Hmm Sidebar: Delete current
 thread** (**Cmd+Shift+Backspace**) opens BB's delete confirmation for the
 current thread or the focused split pane.
 
-**Hmm Zen** in the command palette opens the current thread, or the focused split
+**Zen mode current thread** in the command palette opens the current thread, or the focused split
 pane, in a dialog over a dark overlay, with the thread name as header and Esc or
 a close button to dismiss.
 
