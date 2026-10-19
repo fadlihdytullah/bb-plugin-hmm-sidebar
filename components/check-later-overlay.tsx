@@ -36,7 +36,7 @@ function Cover({
       style={{ ...style, ...GLASS }}
       className="absolute z-[49] flex cursor-pointer flex-col items-center justify-center gap-4 px-6 text-center focus-visible:outline-none"
     >
-      <Wordmark word="check me" className="h-6" />
+      <Wordmark word="check me" className="h-8" />
       <span className="max-w-full truncate text-xs text-muted-foreground">
         {title}
       </span>

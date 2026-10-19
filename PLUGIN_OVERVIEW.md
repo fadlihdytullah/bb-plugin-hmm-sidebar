@@ -54,11 +54,11 @@ current thread or the focused split pane.
 
 **Zen mode current thread** in the command palette opens the current thread, or the focused split
 pane, in a bottom-placed dialog over a blurred glass overlay, stacked with two card layers and a
-pixel "zen" wordmark below, with the thread name centered in the header and Esc or a dimmed
+pixel "zen" wordmark below, with the thread name centered in a compact header and Esc or a dimmed
 close button on the right to dismiss.
 
 **Check me later** in the command palette covers the current thread, or the focused split pane,
-with a blurred glass overlay showing a pixel "check me" wordmark and the thread title. Clicking
+with a blurred glass overlay showing a pixel "check me" wordmark (incognito-style pixel font) and the thread title. Clicking
 the cover reveals the thread again. Covers only show on thread routes, so Settings and other pages stay usable.
 
 Because BB's thread-list replacement slot is exclusive, selecting Hmm Sidebar uses

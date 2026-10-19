@@ -49,10 +49,10 @@ export function ZenDialog() {
           data-testid="zen-dialog"
           hideCloseButton
           overlayClassName="bg-black/25 backdrop-blur-[24px] backdrop-saturate-[1.4]"
-          className="bottom-24 top-auto h-[80vh] max-w-4xl translate-y-0 gap-0 p-0"
+          className="bottom-32 top-auto h-[80vh] max-w-4xl translate-y-0 gap-0 p-0"
         >
           <div className="pointer-events-none absolute top-full left-1/2 mt-6 -translate-x-1/2">
-            <Wordmark word="zen" className="h-8" />
+            <Wordmark word="zen" className="h-11" />
           </div>
           <div
             aria-hidden="true"
@@ -63,16 +63,16 @@ export function ZenDialog() {
             className="pointer-events-none absolute inset-x-8 bottom-full mb-2 h-2 rounded-t-lg border border-b-0 border-border bg-card/40"
           />
           <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-[inherit]">
-            <div className="grid h-11 grid-cols-[1.5rem_minmax(0,1fr)_1.5rem] items-center gap-2 border-b border-border px-4">
+            <div className="grid h-8 grid-cols-[1.25rem_minmax(0,1fr)_1.25rem] items-center gap-2 border-b border-border px-3">
               <span aria-hidden="true" />
-              <DialogTitle className="truncate text-center text-sm font-medium">
+              <DialogTitle className="truncate text-center text-xs font-medium text-muted-foreground">
                 {thread ? threadTitle(thread) : "Zen"}
               </DialogTitle>
               <DialogClose
                 aria-label="Close"
-                className="flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:bg-state-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring motion-reduce:transition-none"
+                className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:bg-state-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring motion-reduce:transition-none"
               >
-                <Icon name="X" className="size-3.5" aria-hidden="true" />
+                <Icon name="X" className="size-3" aria-hidden="true" />
               </DialogClose>
             </div>
             <DialogDescription className="sr-only">
