@@ -78,7 +78,7 @@ with two card layers and a pixel "zen" wordmark below. The centered thread name 
 
 **Check me later** (command palette) covers the current thread, or the focused pane when a split
 is open, with a blurred glass overlay showing a pixel "check me" wordmark and the thread title. Click the
-cover to reveal the thread again.
+cover to reveal the thread again. Covers only show on thread routes, so Settings and other pages stay usable.
 
 Collections are plugin-owned state. Create one with the folder-plus button or
 drag projects into it. Collection names and membership are shared across

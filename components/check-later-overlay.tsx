@@ -36,8 +36,8 @@ function Cover({
       style={{ ...style, ...GLASS }}
       className="absolute z-[49] flex cursor-pointer flex-col items-center justify-center gap-4 px-6 text-center focus-visible:outline-none"
     >
-      <Wordmark word="check me" />
-      <span className="max-w-full truncate text-sm text-muted-foreground">
+      <Wordmark word="check me" className="h-6" />
+      <span className="max-w-full truncate text-xs text-muted-foreground">
         {title}
       </span>
     </button>
@@ -55,7 +55,9 @@ export function CheckLaterOverlay() {
       ? null
       : document.querySelector<HTMLElement>('main[data-sidebar="inset"]');
 
-  if (container === null || marked.length === 0) return null;
+  // activeThreadId is null on non-thread routes (settings etc.), so covers must not linger there.
+  if (container === null || marked.length === 0 || activeThreadId === null)
+    return null;
 
   const titleOf = (threadId: string) => {
     const thread = threads.find((candidate) => candidate.id === threadId);
@@ -80,7 +82,7 @@ export function CheckLaterOverlay() {
               ]
             : [],
         )
-      : activeThreadId !== null && marked.includes(activeThreadId)
+      : marked.includes(activeThreadId)
         ? [
             {
               key: activeThreadId,
