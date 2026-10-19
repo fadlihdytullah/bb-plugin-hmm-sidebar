@@ -34,7 +34,7 @@ function Cover({
       aria-label={`Uncover ${title}`}
       onClick={() => clearCheckLater(threadId)}
       style={{ ...style, ...GLASS }}
-      className="absolute z-[49] flex cursor-pointer flex-col items-center justify-center gap-4 px-6 text-center focus-visible:outline-none"
+      className="absolute z-50 flex cursor-pointer flex-col items-center justify-center gap-4 px-6 text-center focus-visible:outline-none"
     >
       <Wordmark word="check me" className="h-8" />
       <span className="max-w-full truncate text-xs text-muted-foreground">

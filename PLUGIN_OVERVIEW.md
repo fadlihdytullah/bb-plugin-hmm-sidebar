@@ -61,6 +61,8 @@ close button on the right to dismiss.
 with a blurred glass overlay showing a pixel "check me" wordmark (incognito-style pixel font) and the thread title. Clicking
 the cover reveals the thread again. Covers only show on thread routes, so Settings and other pages stay usable.
 
+The plugin also restyles BB's pane side gutters: the dotted background is removed and the zebra stripes fill the whole gutter. Stripes show only on panes at least 768px wide, so narrow split panes stay clean.
+
 Because BB's thread-list replacement slot is exclusive, selecting Hmm Sidebar uses
 one composed list.
 

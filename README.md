@@ -80,6 +80,8 @@ with two card layers and a pixel "zen" wordmark below (same pixel font as BB's i
 is open, with a blurred glass overlay showing a pixel "check me" wordmark (same pixel font as incognito) and the thread title. Click the
 cover to reveal the thread again. Covers only show on thread routes, so Settings and other pages stay usable.
 
+The plugin also restyles BB's pane side gutters: the dotted background is removed and the zebra stripes fill the whole gutter. Stripes show only on panes at least 768px wide, so narrow split panes stay clean.
+
 Collections are plugin-owned state. Create one with the folder-plus button or
 drag projects into it. Collection names and membership are shared across
 clients; a Collection's collapsed state is kept per client.

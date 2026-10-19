@@ -17,6 +17,7 @@ import { ZenDialog } from "@/components/zen-dialog";
 import { OPEN_ZEN_EVENT } from "@/lib/zen-event";
 import { CheckLaterOverlay } from "@/components/check-later-overlay";
 import { markCheckLater, setActiveThreadId } from "@/lib/check-later";
+import { installPaneStripes } from "@/lib/pane-stripes";
 import {
   OPEN_SPLIT_COMPOSER_EVENT,
   SplitThreadComposer,
@@ -881,6 +882,7 @@ function DeleteThreadListener() {
 }
 
 export default definePluginApp((app) => {
+  installPaneStripes();
   app.slots.experimental_appOverlay({
     id: "activity-palette",
     component: ActivityPalette,
