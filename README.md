@@ -67,14 +67,18 @@ current project. Submitting starts the thread and opens it in a split in the
 same BB window only; other open BB windows are unaffected. Bind a shortcut to it
 under **Settings → Keyboard**.
 
-**Hmm Sidebar: Delete current thread** (**Cmd+Shift+Backspace**, shown as
+**Delete current thread** (**Cmd+Shift+Backspace**, shown as
 Cmd+Shift+Delete on macOS) opens BB's own delete confirmation for the current
 thread, or for the focused pane when a split is open.
 
-**Zen mode current thread** (command palette) opens the current thread, or the focused pane when
+**Zen mode current thread** (command palette, **Cmd+Shift+Enter**) opens the current thread, or the focused pane when
 a split is open, in a dialog raised above the bottom of the screen over a blurred glass overlay, stacked
 with two card layers and a pixel "zen" wordmark below (same pixel font as BB's incognito chat). The compact header centers the thread name above a separator;
-**Esc** or the dimmed close button on the right dismisses it.
+**Esc** or the dimmed close button on the right dismisses it. A context ring next to the permission
+label shows estimated context usage; hover it for used/left tokens. Cmd+Shift+Enter is BB's
+`terminal.open` default, so a conflicting plugin default stays unbound: run
+`bb settings keyboard set terminal.open disabled` and
+`bb settings keyboard set plugin:hmm-sidebar/zen Mod+Shift+Enter` to use it.
 
 **Check me later** (command palette) covers the current thread, or the focused pane when a split
 is open, with a blurred glass overlay showing a pixel "check me" wordmark (same pixel font as incognito) and the thread title. Click the

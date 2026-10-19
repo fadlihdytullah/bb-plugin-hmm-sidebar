@@ -11,6 +11,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ContextRing } from "@/components/context-ring";
 import { Icon } from "@/components/ui/icon";
 import { CompactViewportOverrideProvider } from "@/components/ui/hooks/use-compact-viewport";
 import { Wordmark } from "@/components/wordmark";
@@ -86,6 +87,7 @@ export function ZenDialog() {
               />
             ) : null}
           </div>
+          {threadId !== null ? <ContextRing threadId={threadId} /> : null}
         </DialogContent>
       </Dialog>
     </CompactViewportOverrideProvider>

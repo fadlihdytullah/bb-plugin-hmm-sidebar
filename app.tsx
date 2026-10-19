@@ -894,6 +894,7 @@ export default definePluginApp((app) => {
   app.commands.register({
     id: "zen",
     title: "Zen mode current thread",
+    defaultShortcut: { key: "Enter", mod: true, shift: true },
     isAvailable: ({ threadId }) => threadId !== null,
     run: ({ threadId }) => {
       if (threadId === null) return;
@@ -943,7 +944,7 @@ export default definePluginApp((app) => {
   });
   app.commands.register({
     id: "delete-current-thread",
-    title: "Hmm Sidebar: Delete current thread",
+    title: "Delete current thread",
     defaultShortcut: { key: "Backspace", mod: true, shift: true },
     isAvailable: ({ threadId }) => threadId !== null,
     run: ({ threadId }) => {

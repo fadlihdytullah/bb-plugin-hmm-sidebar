@@ -48,14 +48,14 @@ bottom drawer. The new-thread-in-split dialog behaves the same way.
 
 **New thread in split** in the command palette (**Cmd+Shift+P**)
 opens BB's full new-thread composer in a dialog and opens the started thread in
-a split, only in the window that ran the command. **Hmm Sidebar: Delete current
-thread** (**Cmd+Shift+Backspace**) opens BB's delete confirmation for the
+a split, only in the window that ran the command. **Delete current thread** (**Cmd+Shift+Backspace**) opens BB's delete confirmation for the
 current thread or the focused split pane.
 
-**Zen mode current thread** in the command palette opens the current thread, or the focused split
+**Zen mode current thread** in the command palette (**Cmd+Shift+Enter**) opens the current thread, or the focused split
 pane, in a bottom-placed dialog over a blurred glass overlay, stacked with two card layers and a
 pixel "zen" wordmark below, with the thread name centered in a compact header and Esc or a dimmed
-close button on the right to dismiss.
+close button on the right to dismiss. A context ring beside the permission label shows estimated
+context usage, with used and left tokens on hover.
 
 **Check me later** in the command palette covers the current thread, or the focused split pane,
 with a blurred glass overlay showing a pixel "check me" wordmark (incognito-style pixel font) and the thread title. Clicking
