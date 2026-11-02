@@ -1,4 +1,4 @@
-Hmm Sidebar adds a calm, compact project organizer to BB's left sidebar. The
+Hmm Sidebar adds a calm project organizer to BB's left sidebar. The
 Chat/Code view toggle sits inline with BB's New thread button, with a filter box
 below for narrowing threads by title or project. Threads that need you sit in
 their own section above Collections, and projects that have not been filed remain in the
