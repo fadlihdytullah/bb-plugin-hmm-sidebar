@@ -37,7 +37,7 @@ export function ShowMoreButton({
     <button
       type="button"
       aria-expanded={expanded}
-      className={`flex w-full items-center gap-1 rounded-md px-2 py-0.5 text-[11px] text-muted-foreground/50 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring motion-reduce:transition-none ${className}`}
+      className={`flex w-full items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground/50 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring motion-reduce:transition-none ${className}`}
       onClick={onToggle}
     >
       <Icon

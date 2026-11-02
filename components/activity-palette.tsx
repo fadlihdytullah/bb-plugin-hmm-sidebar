@@ -14,7 +14,6 @@ import { CompactViewportOverrideProvider } from "@/components/ui/hooks/use-compa
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
 import { useThreadCommands } from "@/hooks/use-thread-commands";
-import { rememberRecent } from "@/hooks/use-recents";
 import { usePortalScopeProps } from "@/lib/portal-scope";
 import {
   ACTIVITY_PALETTE_FILTERS,
@@ -187,7 +186,6 @@ export function ActivityPalette() {
     (threadId: string, split: boolean) => {
       if (!visibleIds.has(threadId)) return;
       actions.open(threadId, { split });
-      rememberRecent(threadId);
       setOpen(false);
     },
     [actions, visibleIds],

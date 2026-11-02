@@ -11,6 +11,7 @@ import { isCurrentlyActive, isNeedsAttention } from "@/lib/activity-model";
 import { threadTitle } from "@/lib/sidebar-model";
 import { requestThreadDelete } from "@/lib/thread-delete";
 import { toThreadActionTarget } from "@/lib/thread-target";
+import { TITLE_SHIMMER_CLASS } from "@/lib/title-shimmer";
 import { cn } from "@/lib/utils";
 
 function indicatorClass(thread: PluginSidebarThread): string {
@@ -35,6 +36,15 @@ function indicatorClass(thread: PluginSidebarThread): string {
     default:
       return thread.isUnread ? "bg-primary" : "bg-muted-foreground/30";
   }
+}
+
+function isThreadShimmering(thread: PluginSidebarThread): boolean {
+  return (
+    isCurrentlyActive(thread) &&
+    !thread.hasPendingInteraction &&
+    thread.indicator !== "waiting-for-input" &&
+    thread.indicator !== "unread-error"
+  );
 }
 
 /** Rows stay muted unless the thread is running or waiting on the user. */
@@ -111,6 +121,7 @@ export function ThreadRow({
   const target = toThreadActionTarget(thread);
   const isActive = thread.id === activeThreadId;
   const isHighlighted = isThreadHighlighted(thread);
+  const isShimmering = isThreadShimmering(thread);
 
   return (
     <li className="group/thread relative list-none">
@@ -122,7 +133,7 @@ export function ThreadRow({
           href={thread.href.length > 0 ? thread.href : "#"}
           aria-current={isActive ? "page" : undefined}
           aria-label={`${title}${thread.indicatorLabel ? `, ${thread.indicatorLabel}` : ""}`}
-          className={`flex min-w-0 items-center gap-2 rounded-md px-2 py-0.5 pr-12 text-xs transition-colors motion-reduce:transition-none ${
+          className={`flex min-w-0 items-center gap-2 rounded-md px-2 !py-1.5 pr-12 !text-[14px] transition-colors motion-reduce:transition-none ${
             isActive
               ? "bg-sidebar-accent text-sidebar-accent-foreground"
               : isHighlighted
@@ -136,10 +147,11 @@ export function ThreadRow({
           }}
         >
           <span
-            aria-hidden="true"
-            className={`size-1.5 shrink-0 rounded-full ${indicatorClass(thread)}`}
-          />
-          <span className="min-w-0 flex-1 truncate font-normal leading-4">
+            className={cn(
+              "min-w-0 flex-1 truncate font-normal leading-5",
+              isShimmering && TITLE_SHIMMER_CLASS,
+            )}
+          >
             {title}
           </span>
           {thread.isUnread ? (
@@ -147,6 +159,12 @@ export function ThreadRow({
           ) : null}
         </a>
       </ThreadActionsContextMenu>
+      {!isShimmering && (thread.indicator !== "none" || thread.isUnread) ? (
+        <span
+          aria-hidden="true"
+          className={`pointer-events-none absolute right-3 top-1/2 size-1.5 -translate-y-1/2 rounded-full group-focus-within/thread:opacity-0 group-hover/thread:opacity-0 ${indicatorClass(thread)}`}
+        />
+      ) : null}
       <div className="pointer-events-auto absolute bottom-0 right-1 top-0 flex items-center">
         <button
           type="button"

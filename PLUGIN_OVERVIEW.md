@@ -1,13 +1,12 @@
-Hmm Sidebar adds a calm, compact project organizer to BB's left sidebar. Its
-primary header is a single compact action bar: the pixel "suikodev" wordmark
-stays on the left, while New thread and Search threads are icon-only actions;
-Search threads opens the Activity palette. Unread threads get their own section,
-Collections stay at the top, and projects that have not been filed remain in the
+Hmm Sidebar adds a calm, compact project organizer to BB's left sidebar. The
+Chat/Code view toggle sits inline with BB's New thread button, with a filter box
+below for narrowing threads by title or project. Threads that need you sit in
+their own section above Collections, and projects that have not been filed remain in the
 same flat list shape as BB's native sidebar.
 
 Create, rename, reorder, collapse, and delete Collections without changing BB
 projects themselves. Each Collection can be toggled individually, and every
-section (Pinned, Collections, Projects, Chats) can be hidden or shown by clicking
+titled section (Pinned, Collections, Chats) can be hidden or shown by clicking
 its header. Drag a project onto a Collection to move it. Project action menus
 keep Rename project and Delete project, plus Clear threads for removing
 inactive threads while preserving running, attention, and error threads.
@@ -22,21 +21,17 @@ focus right now. Pinned projects also stay in their usual place.
 Thread rows continue to use BB's own navigation and actions: unread state,
 BB's own thread menu (pin, rename, archive, notification muting, and any action
 BB adds later), delete confirmation, keyboard shortcuts, and split view
-gestures. Rows use a compact density so more threads fit on screen, and
+gestures. A header toggle separates project threads from non-project chats. Rows use a
+loose layout like BB's default list, and
 empty projects show only their header. The list stays muted: idle threads are
 dimmed, while the open thread and threads that are running or need attention
-stand out. Projects and Chats show up to five threads and Collections up to five
+stand out, and running thread titles shimmer. Projects and Chats show up to five threads and Collections up to five
 projects, with a faded **Show N more** toggle that never hides anything open,
 running, or needing attention. Clicking a Collection or project name toggles it,
 and section header actions appear on hover. Collection data is stored in the plugin's namespaced SQLite
 database and updates are broadcast to other open clients.
 
-The sidebar also keeps the Active Chats activity panel visible. Working chats
-appear automatically, while pinned chats remain visible after becoming idle.
-BB's native pin state is respected and can be toggled from Activity or Recents.
-The Activity section can be collapsed by clicking its header, with its chevron
-shown on hover, and the choice persists.
-The same Activity view is available as a floating palette with **Cmd+E**;
+The Activity view is available as a floating palette with **Cmd+E**;
 search matches thread titles and project names, All / Unread / Pinned / Running
 filters and a Recent or A–Z order narrow the results, arrow keys move through the
 results, **Enter** opens the selected thread, and **Cmd+Enter** opens a split.

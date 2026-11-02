@@ -16,7 +16,7 @@
   },
   "bb": {
     "name": "Hmm Sidebar",
-    "description": "Organize BB projects into collapsible collections while keeping Active Chats visible.",
+    "description": "Organize BB projects into collapsible collections while keeping threads that need you visible.",
     "branding": {
       "icon": "Folder"
     },

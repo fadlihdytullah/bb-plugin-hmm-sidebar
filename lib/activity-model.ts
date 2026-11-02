@@ -104,15 +104,6 @@ export function projectName(
   return project?.name.trim() || "Threads";
 }
 
-export function projectTag(
-  thread: PluginSidebarThread,
-  projects: readonly PluginSidebarProject[],
-): string {
-  const project = projects.find((candidate) => candidate.id === thread.projectId);
-  if (!project || project.isPersonal) return "#threads";
-  return `#${project.name.trim().toLowerCase() || "threads"}`;
-}
-
 export function statusForThread(
   thread: PluginSidebarThread,
 ): ActivityStatusDefinition | null {

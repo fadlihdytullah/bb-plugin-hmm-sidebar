@@ -11,13 +11,13 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import { toast } from "sonner";
 import { ActionMenu, type ActionMenuItem } from "@/components/action-menu";
-import { ActivityPanel } from "@/components/activity-panel";
 import { ActivityPalette } from "@/components/activity-palette";
 import { ZenDialog } from "@/components/zen-dialog";
 import { OPEN_ZEN_EVENT } from "@/lib/zen-event";
 import { CheckLaterOverlay } from "@/components/check-later-overlay";
 import { markCheckLater, setActiveThreadId } from "@/lib/check-later";
 import { installPaneStripes } from "@/lib/pane-stripes";
+import { installTitleShimmer } from "@/lib/title-shimmer";
 import {
   OPEN_SPLIT_COMPOSER_EVENT,
   SplitThreadComposer,
@@ -34,15 +34,18 @@ import { ThreadList } from "@/components/thread-row";
 import { SidebarHeader } from "@/components/sidebar-header";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
 import { useCollapsedCollections } from "@/hooks/use-collapsed-collections";
 import { useCollections } from "@/hooks/use-collections";
 import { usePinnedProjects } from "@/hooks/use-pinned-projects";
+import { setSidebarMode, useSidebarMode } from "@/hooks/use-sidebar-mode";
 import { useThreadCommands } from "@/hooks/use-thread-commands";
 import {
   DELETE_CURRENT_THREAD_EVENT,
   DELETE_THREAD_EVENT,
 } from "@/lib/thread-delete";
 import { toThreadActionTarget } from "@/lib/thread-target";
+import { isNeedsAttention } from "@/lib/activity-model";
 import { buildSidebarModel, threadTitle } from "@/lib/sidebar-model";
 import { rpcContract, type Collection } from "@/contract";
 import {
@@ -92,15 +95,16 @@ function CollectionsSidebar({
   const { status, threads, projects } = experimental_useSidebarThreads();
   const collectionsState = useCollections();
   const { isCollapsed, toggle } = useCollapsedCollections();
+  const sidebarMode = useSidebarMode();
+  const [threadQuery, setThreadQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [looseDropActive, setLooseDropActive] = useState(false);
   const [pinnedExpanded, setPinnedExpanded] = useState(true);
   const [collectionsExpanded, setCollectionsExpanded] = useState(true);
-  const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [projectSort, setProjectSort] = useState<ProjectSort>("name-asc");
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>("all");
-  const [unreadExpanded, setUnreadExpanded] = useState(true);
+  const [needsYouExpanded, setNeedsYouExpanded] = useState(true);
   const [chatsExpanded, setChatsExpanded] = useState(true);
   const [chatSort, setChatSort] = useState<ChatSort>("recent");
   const [chatFilter, setChatFilter] = useState<ChatFilter>("all");
@@ -116,6 +120,30 @@ function CollectionsSidebar({
     () => buildSidebarModel(collectionsState.collections, projects, threads),
     [collectionsState.collections, projects, threads],
   );
+  const activeThreadMode = useMemo(() => {
+    const activeThread = threads.find((thread) => thread.id === activeThreadId);
+    if (activeThread === undefined || model.personalProject === null) return null;
+    return activeThread.projectId === model.personalProject.project.id ? "chat" : "code";
+  }, [activeThreadId, model.personalProject, threads]);
+  useEffect(() => {
+    if (activeThreadMode !== null) setSidebarMode(activeThreadMode);
+  }, [activeThreadId, activeThreadMode]);
+  const normalizedQuery = threadQuery.trim().toLocaleLowerCase();
+  const browseMode = normalizedQuery.length > 0 ? null : sidebarMode;
+  const matchingThreads = useMemo(() => {
+    if (normalizedQuery.length === 0) return [];
+    const projectNames = new Map(projects.map((project) => [project.id, project.name]));
+    const personalProjectId = model.personalProject?.project.id;
+    return threads
+      .filter((thread) => {
+        if (thread.isArchived || thread.isHidden) return false;
+        if ((thread.projectId === personalProjectId) !== (sidebarMode === "chat")) return false;
+        return `${threadTitle(thread)} ${projectNames.get(thread.projectId) ?? ""}`
+          .toLocaleLowerCase()
+          .includes(normalizedQuery);
+      })
+      .sort((left, right) => right.updatedAt - left.updatedAt);
+  }, [model.personalProject, normalizedQuery, projects, sidebarMode, threads]);
   const pinnedProjectIds = usePinnedProjects();
   const pinnedProjects = useMemo(() => {
     const groups = [
@@ -159,10 +187,10 @@ function CollectionsSidebar({
     });
   }, [chatFilter, chatSort, model.personalProject]);
 
-  const unreadThreads = useMemo(
+  const needsYouThreads = useMemo(
     () =>
       threads
-        .filter((thread) => thread.isUnread && !thread.isArchived && !thread.isHidden)
+        .filter((thread) => isNeedsAttention(thread) && !thread.isArchived && !thread.isHidden)
         .sort(
           (left, right) =>
             right.latestAttentionAt - left.latestAttentionAt ||
@@ -363,13 +391,77 @@ function CollectionsSidebar({
     [moveProject],
   );
 
+  const projectViewMenu = (
+    <ActionMenu
+      label="Sort and filter projects"
+      items={projectViewItems}
+      triggerClassName="size-5 group-hover/section:opacity-100 group-focus-within/section:opacity-100 pointer-coarse:opacity-100"
+    >
+      <Icon name="SlidersHorizontal" className="size-3.5" aria-hidden="true" />
+    </ActionMenu>
+  );
+
   return (
     <div
       className="flex h-full min-h-0 flex-col"
       onDragEnd={() => setLooseDropActive(false)}
     >
       <SidebarHeader />
-      {pinnedProjects.length > 0 ? (
+      <div className="shrink-0 px-2 pb-1">
+        <Input
+          type="search"
+          aria-label="Filter threads"
+          placeholder="Filter threads"
+          className="h-7 border-transparent bg-sidebar-accent/60 px-2 text-[13px]"
+          value={threadQuery}
+          onChange={(event) => setThreadQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setThreadQuery("");
+          }}
+        />
+      </div>
+      {browseMode !== null && status === "ready" && needsYouThreads.length > 0 ? (
+        <div className="group/section shrink-0 border-b border-border/60 px-2 py-2">
+          <div
+            className={`flex cursor-pointer items-center justify-between px-1.5 ${needsYouExpanded ? "mb-1" : ""}`}
+            onClick={() => setNeedsYouExpanded((current) => !current)}
+          >
+            <span className="select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
+              Needs you
+              <span className="ml-1.5 tabular-nums opacity-60">{needsYouThreads.length}</span>
+            </span>
+            <div className={SECTION_ACTIONS_CLASS} onClick={(event) => event.stopPropagation()}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7 text-muted-foreground"
+                aria-label={needsYouExpanded ? "Collapse threads that need you" : "Show threads that need you"}
+                onClick={() => setNeedsYouExpanded((current) => !current)}
+              >
+                <Icon
+                  name="ChevronDown"
+                  className={`size-4 transition-transform motion-reduce:transition-none ${
+                    needsYouExpanded ? "rotate-180" : ""
+                  }`}
+                  aria-hidden="true"
+                />
+              </Button>
+            </div>
+          </div>
+          {needsYouExpanded ? (
+            <ThreadList
+              label="Needs you"
+              shortcutTargets={false}
+              threads={needsYouThreads}
+              activeThreadId={activeThreadId}
+              onNavigate={onNavigate}
+              className="max-h-40 overflow-y-auto"
+            />
+          ) : null}
+        </div>
+      ) : null}
+      {browseMode === "code" && pinnedProjects.length > 0 ? (
         <div className="group/section shrink-0 border-b border-border/60 px-2 py-2">
           <div
             className={`flex cursor-pointer items-center justify-between px-1.5 ${pinnedExpanded ? "mb-1" : ""}`}
@@ -418,46 +510,23 @@ function CollectionsSidebar({
         </div>
       ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto px-2">
-      {status === "ready" && unreadThreads.length > 0 ? (
-        <div className={`group/section pt-2 ${unreadExpanded ? "pb-3" : "pb-2"}`}>
-          <div
-            className={`flex cursor-pointer items-center justify-between px-1.5 ${unreadExpanded ? "mb-1" : ""}`}
-            onClick={() => setUnreadExpanded((current) => !current)}
-          >
-            <span className="select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
-              Unread
-              <span className="ml-1.5 tabular-nums opacity-60">{unreadThreads.length}</span>
-            </span>
-            <div className={SECTION_ACTIONS_CLASS} onClick={(event) => event.stopPropagation()}>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-7 text-muted-foreground"
-                aria-label={unreadExpanded ? "Collapse unread threads" : "Show unread threads"}
-                onClick={() => setUnreadExpanded((current) => !current)}
-              >
-                <Icon
-                  name="ChevronDown"
-                  className={`size-4 transition-transform motion-reduce:transition-none ${
-                    unreadExpanded ? "rotate-180" : ""
-                  }`}
-                  aria-hidden="true"
-                />
-              </Button>
-            </div>
-          </div>
-          {unreadExpanded ? (
+      {browseMode === null ? (
+        <div className="pt-2">
+          {matchingThreads.length > 0 ? (
             <ThreadList
-              label="Unread"
-              shortcutTargets={false}
-              threads={unreadThreads}
+              label="Filtered threads"
+              threads={matchingThreads}
               activeThreadId={activeThreadId}
               onNavigate={onNavigate}
             />
-          ) : null}
+          ) : (
+            <p role="status" className="px-2 py-1 text-[11px] text-muted-foreground">
+              No threads match this filter
+            </p>
+          )}
         </div>
       ) : null}
+      {browseMode === "code" ? (
       <div className={`group/section pt-2 ${collectionsExpanded ? "pb-3" : "pb-2"}`}>
       <div
         className={`flex cursor-pointer items-center justify-between px-1.5 ${collectionsExpanded ? "mb-1" : ""}`}
@@ -563,14 +632,14 @@ function CollectionsSidebar({
         </>
       ) : null}
       </div>
+      ) : null}
 
       {status === "ready" && !collectionsState.isLoading ? (
         <>
 
+          {browseMode === "code" ? (
           <div
-            className={`group/section -mx-2 border-t border-border/60 px-2 pt-2 ${
-              projectsExpanded ? "pb-3" : "pb-2"
-            } ${
+            className={`group/section -mx-2 border-t border-border/60 px-2 pb-3 pt-2 ${
               looseDropActive ? "rounded-md bg-sidebar-accent/50" : ""
             }`}
             data-loose-projects-drop-target=""
@@ -588,41 +657,7 @@ function CollectionsSidebar({
             }}
             onDrop={handleLooseDrop}
           >
-            <div
-              className={`group flex cursor-pointer items-center justify-between px-1.5 ${projectsExpanded ? "mb-1" : ""}`}
-              onClick={() => setProjectsExpanded((current) => !current)}
-            >
-              <span className="select-none text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
-                Projects
-              </span>
-              <div className={SECTION_ACTIONS_CLASS} onClick={(event) => event.stopPropagation()}>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-7 text-muted-foreground"
-                  aria-label={projectsExpanded ? "Collapse all projects" : "Show all projects"}
-                  onClick={() => setProjectsExpanded((current) => !current)}
-                >
-                  <Icon
-                    name="ChevronDown"
-                    className={`size-4 transition-transform motion-reduce:transition-none ${
-                      projectsExpanded ? "rotate-180" : ""
-                    }`}
-                    aria-hidden="true"
-                  />
-                </Button>
-                <ActionMenu
-                  label="Sort and filter projects"
-                  items={projectViewItems}
-                  triggerClassName="opacity-100"
-                >
-                  <Icon name="SlidersHorizontal" className="size-4" aria-hidden="true" />
-                </ActionMenu>
-              </div>
-            </div>
-
-            {!projectsExpanded ? null : visibleLooseProjects.length > 0 ? (
+            {visibleLooseProjects.length > 0 ? (
               <ul className="space-y-px" aria-label="Projects">
                 {visibleLooseProjects.map((entry, index) => (
                   <ProjectGroup
@@ -635,20 +670,25 @@ function CollectionsSidebar({
                     projectIndex={index}
                     onMoveProject={moveProject}
                     onError={reportError}
+                    headerActions={index === 0 ? projectViewMenu : undefined}
                   />
                 ))}
               </ul>
             ) : (
-              <p className="px-2 py-1 text-[11px] text-muted-foreground">
-                {model.looseProjects.length === 0
-                  ? "No ungrouped projects"
-                  : "No projects match this filter"}
-              </p>
+              <div className="flex items-center justify-between gap-2 px-2 py-1">
+                <p className="text-[11px] text-muted-foreground">
+                  {model.looseProjects.length === 0
+                    ? "No ungrouped projects"
+                    : "No projects match this filter"}
+                </p>
+                {projectViewMenu}
+              </div>
             )}
           </div>
+          ) : null}
 
-          {model.personalProject !== null ? (
-            <div className={`group/section -mx-2 border-t border-border/60 px-2 pt-2 ${chatsExpanded ? "pb-3" : "pb-2"}`}>
+          {browseMode === "chat" && model.personalProject !== null ? (
+            <div className={`group/section pt-2 ${chatsExpanded ? "pb-3" : "pb-2"}`}>
               <div
                 className={`flex cursor-pointer items-center justify-between px-1.5 ${chatsExpanded ? "mb-1" : ""}`}
                 onClick={() => setChatsExpanded((current) => !current)}
@@ -732,7 +772,7 @@ function CollectionsSidebar({
         </>
       ) : null}
 
-      {status === "ready" && !collectionsState.isLoading && model.collections.length === 0 && model.looseProjects.length === 0 && model.personalProject === null ? (
+      {browseMode !== null && status === "ready" && !collectionsState.isLoading && model.collections.length === 0 && model.looseProjects.length === 0 && model.personalProject === null ? (
         <p className="px-2 py-3 text-xs text-muted-foreground">
           No projects yet. Create a collection when you are ready to organize them.
         </p>
@@ -805,15 +845,6 @@ function CollectionsSidebar({
         </DialogContent>
       </Dialog>
     </div>
-
-      {status === "ready" ? (
-        <ActivityPanel
-          threads={threads}
-          projects={projects}
-          activeThreadId={activeThreadId}
-          onNavigate={onNavigate}
-        />
-      ) : null}
     </div>
   );
 }
@@ -883,6 +914,7 @@ function DeleteThreadListener() {
 
 export default definePluginApp((app) => {
   installPaneStripes();
+  installTitleShimmer();
   app.slots.experimental_appOverlay({
     id: "activity-palette",
     component: ActivityPalette,

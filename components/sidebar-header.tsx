@@ -1,58 +1,75 @@
-import { Button } from "@/components/ui/button";
+import { useLayoutEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@/components/ui/icon";
-import { useThreadCommands } from "@/hooks/use-thread-commands";
-import { OPEN_ACTIVITY_PALETTE_EVENT } from "@/lib/palette-event";
+import { setSidebarMode, useSidebarMode } from "@/hooks/use-sidebar-mode";
+import { usePortalScopeProps } from "@/lib/portal-scope";
 
-const SUIKODEV_WORDMARK_PATH =
-  "M0 120h480v120h-480zM0 240h120v120h-120zM0 360h480v120h-480zM360 480h120v120h-120zM0 600h480v120h-480zM600 120h120v120h-120zM960 120h120v120h-120zM600 240h120v120h-120zM960 240h120v120h-120zM600 360h120v120h-120zM960 360h120v120h-120zM600 480h120v120h-120zM960 480h120v120h-120zM600 600h480v120h-480zM1200 0h120v120h-120zM1200 240h120v120h-120zM1200 360h120v120h-120zM1200 480h120v120h-120zM1200 600h120v120h-120zM1440 0h120v120h-120zM1440 120h120v120h-120zM1800 120h120v120h-120zM1440 240h120v120h-120zM1680 240h120v120h-120zM1440 360h240v120h-240zM1440 480h120v120h-120zM1680 480h120v120h-120zM1440 600h120v120h-120zM1800 600h120v120h-120zM2040 120h480v120h-480zM2040 240h120v120h-120zM2400 240h120v120h-120zM2040 360h120v120h-120zM2400 360h120v120h-120zM2040 480h120v120h-120zM2400 480h120v120h-120zM2040 600h480v120h-480zM3000 0h120v120h-120zM2640 120h480v120h-480zM2640 240h120v120h-120zM3000 240h120v120h-120zM2640 360h120v120h-120zM3000 360h120v120h-120zM2640 480h120v120h-120zM3000 480h120v120h-120zM2640 600h480v120h-480zM3240 120h480v120h-480zM3240 240h120v120h-120zM3600 240h120v120h-120zM3240 360h480v120h-480zM3240 480h120v120h-120zM3240 600h480v120h-480zM3840 120h120v120h-120zM4200 120h120v120h-120zM3840 240h120v120h-120zM4200 240h120v120h-120zM3840 360h120v120h-120zM4200 360h120v120h-120zM3840 480h120v120h-120zM4200 480h120v120h-120zM3960 600h240v120h-240z";
+const HOST_HEADER_SLOT = '[data-testid="sidebar-header-slot"]';
+const HOST_NEW_THREAD_CSS = `${HOST_HEADER_SLOT} > [data-bb-plugin="navigation"] > button { flex: 0 1 auto; padding-right: 0.75rem; }`;
+
+const MODES = [
+  { mode: "chat", label: "Chat threads", icon: "MessageSquare" },
+  { mode: "code", label: "Project threads", icon: "Code" },
+] as const;
 
 export function SidebarHeader() {
-  const commands = useThreadCommands();
+  const activeMode = useSidebarMode();
+  const portalScopeProps = usePortalScopeProps();
+  const [hostSlot, setHostSlot] = useState<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    setHostSlot(document.querySelector<HTMLElement>(HOST_HEADER_SLOT));
+  }, []);
+
+  const toolbar = (
+    <div
+      role="toolbar"
+      aria-label="Sidebar actions"
+      className={`flex shrink-0 items-center gap-1 ${hostSlot !== null ? "ml-auto mr-2.5" : ""}`}
+    >
+      <div
+        role="group"
+        aria-label="Sidebar view"
+        className="flex items-center gap-px rounded-md bg-sidebar-accent/60 p-px"
+      >
+        {MODES.map(({ mode, label, icon }) => (
+          <button
+            key={mode}
+            type="button"
+            title={label}
+            aria-label={label}
+            aria-pressed={activeMode === mode}
+            className={`flex size-6 items-center justify-center rounded-[5px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+              activeMode === mode
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => setSidebarMode(mode)}
+          >
+            <Icon name={icon} className="size-3.5" aria-hidden="true" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (hostSlot !== null) {
+    return createPortal(
+      <div {...portalScopeProps} style={{ display: "contents" }}>
+        <style>{HOST_NEW_THREAD_CSS}</style>
+        {toolbar}
+      </div>,
+      hostSlot,
+    );
+  }
 
   return (
     <header
       aria-label="Hmm Sidebar"
-      className="flex h-10 shrink-0 items-center justify-between px-3"
+      className="flex h-10 shrink-0 items-center justify-end gap-2 px-3"
       data-testid="sidebar-brand"
     >
-      <div className="flex items-center">
-        <svg
-          role="img"
-          aria-label="suikodev"
-          className="h-3.5 w-auto shrink-0 text-foreground"
-          viewBox="0 0 4320 720"
-          shapeRendering="crispEdges"
-        >
-          <path fill="currentColor" d={SUIKODEV_WORDMARK_PATH} />
-        </svg>
-        <h1 className="sr-only">Hmm Sidebar</h1>
-      </div>
-      <div
-        role="toolbar"
-        aria-label="Sidebar actions"
-        className="flex items-center gap-1"
-      >
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-7 rounded-md text-muted-foreground"
-          aria-label="New thread"
-          onClick={() => commands.openNewThread({ focusPrompt: true })}
-        >
-          <Icon name="MessageSquarePlus" className="size-4" aria-hidden="true" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-7 rounded-md text-muted-foreground"
-          aria-label="Search threads"
-          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_ACTIVITY_PALETTE_EVENT))}
-        >
-          <Icon name="Search" className="size-4" aria-hidden="true" />
-        </Button>
-      </div>
+      {toolbar}
     </header>
   );
 }

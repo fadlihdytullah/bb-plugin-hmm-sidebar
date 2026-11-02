@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useState, type DragEvent, type ReactNode } from "react";
 import {
   useRpc,
   type PluginSidebarProject,
@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { ThreadList } from "@/components/thread-row";
+import { setExpandedProject, useExpandedProject } from "@/hooks/use-expanded-project";
 import { togglePinnedProject, usePinnedProjects } from "@/hooks/use-pinned-projects";
 import { useThreadCommands } from "@/hooks/use-thread-commands";
 import { rpcContract } from "@/contract";
@@ -49,17 +50,16 @@ export function ProjectGroup({
   threads,
   activeThreadId,
   onNavigate,
-  initiallyExpanded = true,
   currentCollectionId,
   projectIndex,
   onMoveProject,
   onError,
+  headerActions,
 }: {
   project: PluginSidebarProject;
   threads: readonly PluginSidebarThread[];
   activeThreadId: string | null;
   onNavigate: () => void;
-  initiallyExpanded?: boolean;
   currentCollectionId: string | null;
   projectIndex: number;
   onMoveProject: (
@@ -68,10 +68,12 @@ export function ProjectGroup({
     position: number,
   ) => Promise<void>;
   onError: (cause: unknown) => void;
+  headerActions?: ReactNode;
 }) {
   const actions = useThreadCommands();
   const rpc = useRpc<typeof rpcContract>();
-  const [expanded, setExpanded] = useState(initiallyExpanded);
+  const expanded = useExpandedProject() === project.id;
+  const toggleExpanded = () => setExpandedProject(expanded ? null : project.id);
   const isPinned = usePinnedProjects().includes(project.id);
   const [renameOpen, setRenameOpen] = useState(false);
   const [confirmation, setConfirmation] = useState<ProjectConfirmation | null>(null);
@@ -83,6 +85,10 @@ export function ProjectGroup({
     () => threads.filter((thread) => !thread.isArchived),
     [threads],
   );
+  const containsActiveThread = visibleThreads.some((thread) => thread.id === activeThreadId);
+  useEffect(() => {
+    if (containsActiveThread) setExpandedProject(project.id);
+  }, [containsActiveThread, project.id]);
   const selectedThreadCount = visibleThreads.filter((thread) =>
     selectedThreadIds.has(thread.id),
   ).length;
@@ -194,7 +200,7 @@ export function ProjectGroup({
     >
       <div
         draggable={!project.isPersonal}
-        className={`flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground ${
+        className={`flex min-w-0 items-center gap-1 rounded-md px-2 !py-1 !text-xs font-medium text-muted-foreground hover:text-sidebar-foreground ${
           currentCollectionId !== null ? "pl-3" : ""
         }`}
         onDragStart={(event) => {
@@ -207,34 +213,34 @@ export function ProjectGroup({
           event.dataTransfer.setData("text/plain", `project:${project.id}`);
         }}
       >
-        <button
-          type="button"
-          aria-label={`${expanded ? "Collapse" : "Expand"} ${project.name}`}
-          aria-expanded={expanded}
-          className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          onClick={() => setExpanded((current) => !current)}
-        >
-          <Icon
-            name="ChevronDown"
-            className={`size-3.5 transition-transform motion-reduce:transition-none ${
-              expanded ? "" : "-rotate-90"
-            }`}
-            aria-hidden="true"
-          />
-        </button>
         {/* Pointer shortcut for the toggle button, which stays the keyboard target. */}
         <span
-          className="min-w-0 flex-1 cursor-pointer select-none truncate"
+          className="min-w-0 cursor-pointer select-none truncate"
           title={project.name}
           data-testid="project-name"
-          onClick={() => setExpanded((current) => !current)}
+          onClick={toggleExpanded}
         >
           {project.name}
         </span>
         <button
           type="button"
+          aria-label={`${expanded ? "Collapse" : "Expand"} ${project.name}`}
+          aria-expanded={expanded}
+          className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          onClick={toggleExpanded}
+        >
+          <Icon
+            name="ChevronDown"
+            className={`size-3 transition-transform motion-reduce:transition-none ${
+              expanded ? "" : "-rotate-90"
+            }`}
+            aria-hidden="true"
+          />
+        </button>
+        <button
+          type="button"
           aria-label={`New thread in ${project.name}`}
-          className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-state-hover hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/project:opacity-100"
+          className="ml-auto flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-state-hover hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/project:opacity-100"
           onClick={() => actions.openNewThread({ projectId: project.id, focusPrompt: true })}
         >
           <Icon name="MessageSquarePlus" className="size-3.5" aria-hidden="true" />
@@ -248,15 +254,14 @@ export function ProjectGroup({
             <Icon name="MoreHorizontal" className="size-4" aria-hidden="true" />
           </ActionMenu>
         ) : null}
+        {headerActions}
       </div>
       {expanded && visibleThreads.length > 0 ? (
         <ThreadList
           threads={visibleThreads}
           activeThreadId={activeThreadId}
           onNavigate={onNavigate}
-          className={`border-l border-border/60 pl-1 ${
-            currentCollectionId !== null ? "ml-3.5" : "ml-2"
-          }`}
+          className={`mb-3 ${currentCollectionId !== null ? "pl-1" : ""}`}
         />
       ) : null}
       <NameDialog

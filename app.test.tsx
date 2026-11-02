@@ -2,6 +2,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
+import { setExpandedProject } from "@/hooks/use-expanded-project";
+import { setSidebarMode } from "@/hooks/use-sidebar-mode";
 import type {
   PluginCommandRegistration,
   PluginSidebarThread,
@@ -96,6 +98,8 @@ function runningThread(id: string, projectId: string): PluginSidebarThread {
 
 afterEach(() => {
   cleanup();
+  setExpandedProject(null);
+  setSidebarMode("code");
   window.localStorage.clear();
   vi.clearAllMocks();
 });
@@ -266,28 +270,72 @@ describe("Hmm Sidebar app", () => {
     chatContainer.remove();
   });
 
-  it("keeps the logo and New thread and Search actions in the sidebar header", async () => {
+  it("falls back to an in-list view toggle without bb's header row", async () => {
     const slot = renderSlot(threadList, listProps, {
       rpc: { collections_list: () => ({ collections: [] }) },
     });
     const header = await slot.findByTestId("sidebar-brand");
     const actions = within(header).getByLabelText("Sidebar actions");
-    const searchRequests = vi.fn();
-    window.addEventListener("hmm-sidebar:open-activity-palette", searchRequests);
 
     expect(app.contentScripts).toHaveLength(0);
-    expect(within(header).getByRole("img", { name: "suikodev" })).toBeTruthy();
-    expect(within(actions).getAllByRole("button")).toHaveLength(2);
+    expect(within(header).queryByRole("img", { name: "suikodev" })).toBeNull();
+    expect(within(actions).getAllByRole("button").map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Chat threads",
+      "Project threads",
+    ]);
+  });
 
-    fireEvent.click(within(actions).getByRole("button", { name: "New thread" }));
-    expect(slot.inspection.navigateCalls).toContainEqual({
-      method: "toCompose",
-      options: { focusPrompt: true },
+  it("portals the view toggle next to bb's New thread button", async () => {
+    const hostSlot = document.createElement("div");
+    hostSlot.dataset.testid = "sidebar-header-slot";
+    document.body.append(hostSlot);
+
+    const slot = renderSlot(threadList, listProps, {
+      rpc: { collections_list: () => ({ collections: [] }) },
+    });
+    const toggle = await within(hostSlot).findByRole("button", { name: "Chat threads" });
+
+    expect(slot.queryByTestId("sidebar-brand")).toBeNull();
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+
+    slot.unmount();
+    hostSlot.remove();
+  });
+
+  it("filters threads in the current view by title or project", async () => {
+    const slot = renderSlot(threadList, listProps, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [
+          thread("Build API", "project-1"),
+          thread("Write docs", "project-2"),
+          thread("API chat", "threads"),
+        ],
+        projects: [
+          { id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" },
+          { id: "project-2", name: "Handbook", isPersonal: false, href: "", settingsHref: "" },
+          { id: "threads", name: "Threads", isPersonal: true, href: "", settingsHref: "" },
+        ],
+      },
+      rpc: { collections_list: () => ({ collections: [] }) },
     });
 
-    fireEvent.click(within(actions).getByRole("button", { name: "Search threads" }));
-    expect(searchRequests).toHaveBeenCalledTimes(1);
-    window.removeEventListener("hmm-sidebar:open-activity-palette", searchRequests);
+    const filter = await slot.findByRole("searchbox", { name: "Filter threads" });
+    fireEvent.change(filter, { target: { value: "api" } });
+    const results = () => within(slot.getByRole("list", { name: "Filtered threads" }));
+    expect(results().getByText("Build API")).toBeTruthy();
+    expect(results().queryByText("API chat")).toBeNull();
+    expect(slot.queryByText("Collections")).toBeNull();
+
+    fireEvent.change(filter, { target: { value: "handbook" } });
+    expect(results().getByText("Write docs")).toBeTruthy();
+
+    fireEvent.change(filter, { target: { value: "missing" } });
+    expect(slot.getByRole("status").textContent).toBe("No threads match this filter");
+
+    fireEvent.keyDown(filter, { key: "Escape" });
+    expect(slot.getByText("Collections")).toBeTruthy();
   });
 
   it("registers no sidebar navigation slot", () => {
@@ -310,12 +358,13 @@ describe("Hmm Sidebar app", () => {
     window.removeEventListener("hmm-sidebar:new-thread-split", requests);
   });
 
-  it("lists unread threads in their own section", async () => {
+  it("lists threads that need the user above collections", async () => {
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
         status: "ready",
         threads: [
           { ...thread("Fresh reply", "project-1"), isUnread: true },
+          { ...thread("Waiting reply", "project-1"), indicator: "waiting-for-input" as const },
           thread("Read thread", "project-1"),
         ],
         projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
@@ -323,18 +372,19 @@ describe("Hmm Sidebar app", () => {
       rpc: { collections_list: () => ({ collections: [] }) },
     });
 
-    const unread = await slot.findByRole("list", { name: "Unread" });
-    expect(within(unread).getByText("Fresh reply")).toBeTruthy();
-    expect(within(unread).queryByText("Read thread")).toBeNull();
+    const needsYou = await slot.findByRole("list", { name: "Needs you" });
+    expect(within(needsYou).getByText("Fresh reply")).toBeTruthy();
+    expect(within(needsYou).getByText("Waiting reply")).toBeTruthy();
+    expect(within(needsYou).queryByText("Read thread")).toBeNull();
     expect(
-      unread.querySelector("[data-sidebar-thread-shortcut-target]"),
+      needsYou.querySelector("[data-sidebar-thread-shortcut-target]"),
     ).toBeNull();
 
-    fireEvent.click(slot.getByRole("button", { name: "Collapse unread threads" }));
-    expect(slot.queryByRole("list", { name: "Unread" })).toBeNull();
+    fireEvent.click(slot.getByRole("button", { name: "Collapse threads that need you" }));
+    expect(slot.queryByRole("list", { name: "Needs you" })).toBeNull();
   });
 
-  it("hides the unread section when nothing is unread", async () => {
+  it("hides Needs you when nothing needs the user", async () => {
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
         status: "ready",
@@ -344,8 +394,8 @@ describe("Hmm Sidebar app", () => {
       rpc: { collections_list: () => ({ collections: [] }) },
     });
 
-    await slot.findByText("Read thread");
-    expect(slot.queryByRole("list", { name: "Unread" })).toBeNull();
+    await slot.findByText("Engineering");
+    expect(slot.queryByRole("list", { name: "Needs you" })).toBeNull();
   });
 
   it("limits collection projects to five, keeping projects with highlighted threads", async () => {
@@ -377,7 +427,7 @@ describe("Hmm Sidebar app", () => {
     expect(app.threadLists).toHaveLength(1);
     expect(threadList.id).toBe("collections");
 
-    const slot = renderSlot(threadList, listProps, {
+    const slot = renderSlot(threadList, { ...listProps, activeThreadId: "Build API" }, {
       sidebarThreads: {
         status: "ready",
         threads: [thread("Build API", "project-1"), thread("Personal note", "threads")],
@@ -398,7 +448,10 @@ describe("Hmm Sidebar app", () => {
     await slot.findByText("Work");
     expect(slot.getByText("Engineering")).toBeTruthy();
     expect(slot.getByText("Build API")).toBeTruthy();
-    expect(slot.getByText("Chats")).toBeTruthy();
+    expect(slot.queryByText("Personal note")).toBeNull();
+
+    fireEvent.click(slot.getByRole("button", { name: "Chat threads" }));
+    expect(slot.queryByText("Work")).toBeNull();
     expect(
       within(slot.getByRole("list", { name: "Chats" })).getByText("Personal note"),
     ).toBeTruthy();
@@ -428,7 +481,36 @@ describe("Hmm Sidebar app", () => {
     expect(link("Running")).not.toContain("text-muted-foreground");
   });
 
+  it("shimmers only running threads that are not waiting on the user", async () => {
+    setSidebarMode("chat");
+    const slot = renderSlot(threadList, listProps, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [
+          thread("Idle", "threads"),
+          runningThread("Running", "threads"),
+          { ...runningThread("Blocked", "threads"), hasPendingInteraction: true },
+          {
+            ...thread("Agents", "threads"),
+            activity: { ...thread("Agents", "threads").activity, backgroundAgents: 1 },
+          },
+        ],
+        projects: [{ id: "threads", name: "Threads", isPersonal: true, href: "", settingsHref: "" }],
+      },
+      rpc: { collections_list: () => ({ collections: [] }) },
+    });
+
+    const chats = await slot.findByRole("list", { name: "Chats" });
+    const shimmers = (name: string) =>
+      within(chats).getByText(name).classList.contains("hmm-title-shimmer");
+    expect(shimmers("Idle")).toBe(false);
+    expect(shimmers("Running")).toBe(true);
+    expect(shimmers("Blocked")).toBe(false);
+    expect(shimmers("Agents")).toBe(true);
+  });
+
   it("limits chats to five with a toggle, keeping highlighted threads visible", async () => {
+    setSidebarMode("chat");
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
         status: "ready",
@@ -453,6 +535,7 @@ describe("Hmm Sidebar app", () => {
   });
 
   it("collapses, sorts and filters the flat chats list", async () => {
+    setSidebarMode("chat");
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
         status: "ready",
@@ -486,6 +569,7 @@ describe("Hmm Sidebar app", () => {
   });
 
   it("confirms before clearing personal chats", async () => {
+    setSidebarMode("chat");
     const clearChats = vi.fn(() => ({ deletedCount: 2, preservedCount: 1 }));
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
@@ -511,6 +595,7 @@ describe("Hmm Sidebar app", () => {
   });
 
   it("bulk deletes only the selected personal chats", async () => {
+    setSidebarMode("chat");
     const clearChats = vi.fn(() => ({ deletedCount: 1, preservedCount: 0 }));
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
@@ -577,14 +662,55 @@ describe("Hmm Sidebar app", () => {
     });
 
     const projects = await slot.findByRole("list", { name: "Projects" });
+    expect(within(projects).queryByText("Project chat")).toBeNull();
+    fireEvent.click(within(projects).getByText("Alpha"));
+    expect(within(projects).getByText("Project chat")).toBeTruthy();
     fireEvent.click(within(projects).getByText("Alpha"));
     expect(within(projects).queryByText("Project chat")).toBeNull();
     expect(slot.getByRole("button", { name: "Expand Alpha" })).toBeTruthy();
-    fireEvent.click(within(projects).getByText("Alpha"));
-    expect(within(projects).getByText("Project chat")).toBeTruthy();
   });
 
-  it("collapses all loose projects and filters the project group", async () => {
+  it("follows the open thread into its sidebar view", async () => {
+    const data = {
+      sidebarThreads: {
+        status: "ready" as const,
+        threads: [thread("Build API", "project-1"), thread("Personal note", "threads")],
+        projects: [
+          { id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" },
+          { id: "threads", name: "Threads", isPersonal: true, href: "", settingsHref: "" },
+        ],
+      },
+      rpc: { collections_list: () => ({ collections: [] }) },
+    };
+    const slot = renderSlot(threadList, { ...listProps, activeThreadId: "Personal note" }, data);
+
+    await slot.findByRole("list", { name: "Chats" });
+    expect(slot.getByRole("button", { name: "Chat threads" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(slot.getByRole("button", { name: "Project threads" }));
+    expect(slot.queryByRole("list", { name: "Chats" })).toBeNull();
+  });
+
+  it("keeps only one project expanded at a time", async () => {
+    const slot = renderSlot(threadList, { ...listProps, activeThreadId: "Alpha chat" }, {
+      sidebarThreads: {
+        status: "ready",
+        threads: [thread("Alpha chat", "alpha"), thread("Beta chat", "beta")],
+        projects: [
+          { id: "alpha", name: "Alpha", isPersonal: false, href: "", settingsHref: "" },
+          { id: "beta", name: "Beta", isPersonal: false, href: "", settingsHref: "" },
+        ],
+      },
+      rpc: { collections_list: () => ({ collections: [] }) },
+    });
+
+    await slot.findByText("Alpha chat");
+    expect(slot.queryByText("Beta chat")).toBeNull();
+    fireEvent.click(slot.getByRole("button", { name: "Expand Beta" }));
+    expect(slot.getByText("Beta chat")).toBeTruthy();
+    expect(slot.queryByText("Alpha chat")).toBeNull();
+  });
+
+  it("sorts and filters the untitled project group", async () => {
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
         status: "ready",
@@ -599,12 +725,8 @@ describe("Hmm Sidebar app", () => {
       },
     });
 
-    await slot.findByText("Active project chat");
-    fireEvent.click(slot.getByRole("button", { name: "Collapse all projects" }));
-    expect(slot.queryByText("With chat")).toBeNull();
-    expect(slot.queryByRole("list", { name: "Projects" })).toBeNull();
-    fireEvent.click(slot.getByRole("button", { name: "Show all projects" }));
-    expect(slot.getByText("With chat")).toBeTruthy();
+    await slot.findByText("With chat");
+    expect(slot.queryByText("Projects")).toBeNull();
 
     fireEvent.click(slot.getByRole("button", { name: "Sort and filter projects" }));
     fireEvent.click(slot.getByRole("menuitem", { name: "Only projects with chats" }));
@@ -623,7 +745,7 @@ describe("Hmm Sidebar app", () => {
   });
 
   it("collapses a collection and preserves BB thread navigation", async () => {
-    const slot = renderSlot(threadList, listProps, {
+    const slot = renderSlot(threadList, { ...listProps, activeThreadId: "Build API" }, {
       sidebarThreads: {
         status: "ready",
         threads: [thread("Build API", "project-1")],
@@ -651,11 +773,6 @@ describe("Hmm Sidebar app", () => {
 
     fireEvent.click(slot.getByRole("button", { name: "Expand Work" }));
     expect(slot.getByText("Engineering")).toBeTruthy();
-    expect(slot.queryByText("Build API")).toBeNull();
-
-    fireEvent.click(
-      slot.getByRole("button", { name: "Expand Engineering" }),
-    );
     expect(slot.getByText("Build API")).toBeTruthy();
   });
 
@@ -675,7 +792,7 @@ describe("Hmm Sidebar app", () => {
       },
     });
 
-    await slot.findByText("Build API");
+    await slot.findByText("Work");
     fireEvent.click(slot.getByRole("button", { name: "Collapse all collections" }));
     expect(slot.queryByText("Work")).toBeNull();
     expect(slot.queryByRole("list", { name: "Collections" })).toBeNull();
@@ -687,7 +804,7 @@ describe("Hmm Sidebar app", () => {
 
   it("shows bb's own thread menu on each row and requests delete itself", async () => {
     const pin = vi.fn(async () => {});
-    const slot = renderSlot(threadList, listProps, {
+    const slot = renderSlot(threadList, { ...listProps, activeThreadId: "Build API" }, {
       sidebarThreads: {
         status: "ready",
         threads: [thread("Build API", "project-1")],
@@ -897,102 +1014,20 @@ describe("Hmm Sidebar app", () => {
     expect(moveProject).not.toHaveBeenCalled();
   });
 
-  it("keeps the Active Chats panel in the combined sidebar", async () => {
+  it("removes the Activity panel and keeps running threads out of Needs you", async () => {
     const slot = renderSlot(threadList, listProps, {
       sidebarThreads: {
         status: "ready",
         threads: [runningThread("Build API", "project-1")],
         projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
       },
-      rpc: {
-        collections_list: () => ({ collections: [] }),
-      },
+      rpc: { collections_list: () => ({ collections: [] }) },
     });
 
-    const activity = await slot.findByRole("region", {
-      name: "Sidebar activity",
-    });
-    expect(within(activity).getByText("Build API")).toBeTruthy();
-    expect(within(activity).getByText("#engineering")).toBeTruthy();
+    await slot.findByText("Engineering");
+    expect(slot.queryByRole("region", { name: "Sidebar activity" })).toBeNull();
+    expect(slot.queryByRole("list", { name: "Needs you" })).toBeNull();
   });
-
-  it("keeps a pinned idle chat in Activity and allows unpinning it", async () => {
-    const slot = renderSlot(threadList, listProps, {
-      sidebarThreads: {
-        status: "ready",
-        threads: [{ ...thread("Idle chat", "project-1"), isPinned: true }],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
-      },
-      rpc: {
-        collections_list: () => ({ collections: [] }),
-        threads_set_pinned: () => ({ ok: true }),
-      },
-    });
-
-    const activity = await slot.findByRole("region", { name: "Sidebar activity" });
-    expect(within(activity).getByText("Idle chat")).toBeTruthy();
-    fireEvent.click(
-      within(activity).getByRole("button", { name: "Unpin Idle chat in Activity" }),
-    );
-    await waitFor(() =>
-      expect(slot.inspection.rpcCalls).toContainEqual({
-        method: "threads_set_pinned",
-        input: { threadId: "Idle chat", pinned: false },
-      }),
-    );
-  });
-
-  it("toggles the Activity section and remembers the choice", async () => {
-    const options = {
-      sidebarThreads: {
-        status: "ready" as const,
-        threads: [runningThread("Build API", "project-1")],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
-      },
-      rpc: {
-        collections_list: () => ({ collections: [] }),
-      },
-    };
-    const slot = renderSlot(threadList, listProps, options);
-
-    const activity = await slot.findByRole("region", { name: "Sidebar activity" });
-    fireEvent.click(within(activity).getByRole("button", { name: "Hide Activity" }));
-    expect(within(activity).queryByText("Build API")).toBeNull();
-
-    cleanup();
-    const again = renderSlot(threadList, listProps, options);
-    const reopened = await again.findByRole("region", { name: "Sidebar activity" });
-    expect(within(reopened).queryByText("Build API")).toBeNull();
-    fireEvent.click(within(reopened).getByRole("button", { name: "Show Activity" }));
-    expect(within(reopened).getByText("Build API")).toBeTruthy();
-  });
-
-  it("lets a working chat be pinned without changing its active behavior", async () => {
-    const slot = renderSlot(threadList, listProps, {
-      sidebarThreads: {
-        status: "ready",
-        threads: [runningThread("Build API", "project-1")],
-        projects: [{ id: "project-1", name: "Engineering", isPersonal: false, href: "", settingsHref: "" }],
-      },
-      rpc: {
-        collections_list: () => ({ collections: [] }),
-        threads_set_pinned: () => ({ ok: true }),
-      },
-    });
-
-    const activity = await slot.findByRole("region", { name: "Sidebar activity" });
-    fireEvent.click(
-      within(activity).getByRole("button", { name: "Pin Build API in Activity" }),
-    );
-    await waitFor(() =>
-      expect(slot.inspection.rpcCalls).toContainEqual({
-        method: "threads_set_pinned",
-        input: { threadId: "Build API", pinned: true },
-      }),
-    );
-    expect(within(activity).getByText("Build API")).toBeTruthy();
-  });
-
   it("opens Activity with Cmd+E and searches by title or project", async () => {
     const slot = renderSlot(activityPalette, {}, {
       sidebarThreads: {

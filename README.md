@@ -1,10 +1,9 @@
 # Hmm Sidebar
 
 Groups BB projects into collapsible Collections while keeping the built-in
-thread actions, keyboard shortcuts, and split navigation. The list starts with
-a compact header: the pixel "suikodev" wordmark (the same one the mercury theme
-draws above the new-thread composer) on the left, with New thread and Search
-threads icon buttons on the right. Search threads opens the Activity palette.
+thread actions, keyboard shortcuts, and split navigation. The Chat/Code view
+toggle sits inline with bb's New thread button, and the list starts with a
+filter box that narrows the current view by thread title or project name.
 The rest of bb's navigation lives in bb's own navigation rail (bb 0.46+).
 
 Requires bb 0.46 or newer.
@@ -31,23 +30,16 @@ bb plugin reload hmm-sidebar
 ```
 
 Then select **Hmm Sidebar** under **Settings → Appearance → Sidebar**.
-BB allows only one plugin to replace the thread list, so this plugin includes
-the **Active Chats Sidebar** activity panel when it is selected.
 
-Threads you have not read yet are listed in an **Unread** section above
-Collections; it is hidden when nothing is unread. Rows there are display-only
-copies, so bb's numbered thread shortcuts keep pointing at the original rows.
+Threads that are unread, waiting for input, or errored are listed in a **Needs
+you** section above Collections in both views; it is hidden when nothing needs
+you. Rows there are display-only copies, so bb's numbered thread shortcuts keep
+pointing at the original rows.
 
 Every thread row uses bb's own thread menu (the **...** button and
 right-click), so new bb thread actions such as notification muting appear
 without plugin changes. The hover trash button asks bb to confirm the delete.
 **New thread in split** is also added to that menu.
-
-Active chats continue to appear automatically while agents are working or
-need attention. Pin a chat anywhere in BB—or directly from Activity or
-Recents—to keep it in Activity while it is idle. Click anywhere on the **Activity**
-header (or its hover chevron) to hide or show the section; the choice is
-remembered per BB client.
 
 Press **Cmd+E** to open the floating Activity palette from anywhere in BB.
 Search by thread title or project, narrow it with the **All / Unread / Pinned /
@@ -102,18 +94,23 @@ Collections.
 the projects in focus right now stay visible while the rest of the list scrolls.
 Pinned projects also stay in their usual place. Pins are kept per client.
 
-Rows use a compact density: thread rows are 20px tall, project and Collection
-rows 24px, and their hover actions shrink to match. Projects with no threads
+Rows use a loose layout like BB's default list: project names are small labels
+aligned with their threads, thread rows are 32px tall with 14px text, and
+status dots sit on the right. Projects with no threads
 show only their header, without a placeholder row. Click a Collection or project
-name to expand or collapse it, not just its icon. Each section (Pinned,
-Collections, Projects, Chats, Activity) can be hidden or shown by clicking
+name to expand or collapse it, not just its icon. The header toggle switches between project threads (Pinned, Collections,
+Projects) and non-project chats, follows the open thread, and is kept per
+client. Each titled section (Needs you, Pinned,
+Collections, Chats) can be hidden or shown by clicking
 anywhere on its header; section header actions appear on hover or focus, and
 always on touch screens.
 
 The list stays muted so only what matters stands out: idle threads are dimmed,
 while the open thread and threads that are running or need attention (unread,
-waiting for input, errors) are shown at full strength. Each project and the
-Chats list show up to five threads, and each Collection up to five projects,
+waiting for input, errors) are shown at full strength. Running thread titles
+shimmer in place of a status dot, unless the thread is waiting on you, and stay
+still when reduced motion is on. Each project and the Chats list show up to five
+threads, and each Collection up to five projects,
 with a faded last row and a **Show N more** / **Show less** toggle. Threads (and
 projects holding threads) that are open, running, or need attention are never
 hidden by the limit.

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import { type DragEvent } from "react";
 import type { Collection } from "@/contract";
 import { ActionMenu } from "@/components/action-menu";
 import { ShowMoreButton, useShowMore } from "@/components/show-more";
@@ -50,16 +50,6 @@ export function CollectionRow({
   onError: (cause: unknown) => void;
   onMoveCollection: (collectionId: string, position: number) => Promise<void>;
 }) {
-  const [projectsInitiallyExpanded, setProjectsInitiallyExpanded] = useState(expanded);
-  const previousExpanded = useRef(expanded);
-
-  useEffect(() => {
-    if (previousExpanded.current && !expanded) {
-      setProjectsInitiallyExpanded(false);
-    }
-    previousExpanded.current = expanded;
-  }, [expanded]);
-
   const {
     shown: shownProjects,
     hiddenCount,
@@ -74,12 +64,6 @@ export function CollectionRow({
     ),
   );
 
-  const handleToggle = () => {
-    if (expanded) {
-      setProjectsInitiallyExpanded(false);
-    }
-    onToggle();
-  };
 
   return (
     <li
@@ -116,7 +100,7 @@ export function CollectionRow({
     >
       <div
         draggable
-        className="group/collection flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-sidebar-foreground/70 hover:bg-sidebar-accent/70"
+        className="group/collection flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-[13px] font-semibold text-sidebar-foreground/70 hover:bg-sidebar-accent/70"
         onDragStart={(event) => {
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData(COLLECTION_DRAG_TYPE, collection.id);
@@ -128,7 +112,7 @@ export function CollectionRow({
           aria-label={`${expanded ? "Collapse" : "Expand"} ${collection.name}`}
           aria-expanded={expanded}
           className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          onClick={handleToggle}
+          onClick={onToggle}
         >
           <Icon name="Folder" className="size-3.5" aria-hidden="true" />
         </button>
@@ -136,7 +120,7 @@ export function CollectionRow({
         <span
           className="min-w-0 flex-1 cursor-pointer select-none truncate"
           title={collection.name}
-          onClick={handleToggle}
+          onClick={onToggle}
         >
           {collection.name}
         </span>
@@ -172,7 +156,6 @@ export function CollectionRow({
                 threads={entry.threads}
                 activeThreadId={activeThreadId}
                 onNavigate={onNavigate}
-                initiallyExpanded={projectsInitiallyExpanded}
                 currentCollectionId={collection.id}
                 projectIndex={projects.indexOf(entry)}
                 onMoveProject={onMoveProject}
